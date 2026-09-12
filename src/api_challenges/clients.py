@@ -30,11 +30,11 @@ class BaseClient:
         default_headers.update(headers or {})
         base_url = base_url.rstrip('/')
         self._headers= default_headers
-        self._client= httpx.Client(
-            base_url=base_url,
-            headers=self._headers,
-            timeout=timeout,
-            follow_redirects=True
+        self._client = httpx.Client(
+            base_url = base_url,
+            headers = self._headers,
+            timeout = timeout,
+            follow_redirects = True
         )
     def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         response = self._client.request(method, path, **kwargs)

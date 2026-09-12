@@ -38,5 +38,6 @@ markers = [                     # объявляем маркеры, чтобы 
     'smoke: quick checks',
     'regression: full suite',
     'negative: negative scenarios',
+    'positive: positive scenarios'
 ]
 addopts = '-ra --strict-markers'

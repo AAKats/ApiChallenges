@@ -19,5 +19,15 @@ def assert_challenge_item(item: dict) -> None:
     assert isinstance(item, dict), f'not a dict: {item!r}'
     assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
     assert isinstance(item.get('name'), str), f'name missing or not str: {item.get('name')!r}'
-    assert isinstance(item.get('status'), bool), (f'status missing or'
-                                                  f' not bool: {item.get('status')!r}')
+    assert isinstance(item.get('status'), bool), \
+        f'status missing or not bool: {item.get('status')!r}'
+
+
+def assert_todo_item(item: dict) -> None:
+    assert isinstance(item, dict), f'not a dict: {item!r}'
+    assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
+    assert isinstance(item.get('title'), str), f'title missing or not str: {item.get('title')!r}'
+    assert isinstance(item.get('doneStatus'), bool), \
+        f'done status missing or not bool: {item.get('doneStatus')!r}'
+    assert isinstance(item.get('description'), str), \
+        f'description missing or not str: {item.get('description')!r}'
