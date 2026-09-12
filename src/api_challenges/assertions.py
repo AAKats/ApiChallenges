@@ -1,0 +1,23 @@
+import httpx
+
+
+def assert_status_code(*, response: httpx.Response, expected_status_code: int) -> None:
+    status_code = response.status_code
+    if status_code != expected_status_code:
+        raise AssertionError(f'Incorrect status code {status_code},'
+                             f' should be {expected_status_code}')
+
+
+def assert_content_type(*, response: httpx.Response, expected_content_type: str) -> None:
+    content_type = response.headers.get('Content-Type')
+    if content_type != expected_content_type:
+        raise AssertionError(f'Incorrect content type {content_type},'
+                             f' should be {expected_content_type}')
+
+
+def assert_challenge_item(item: dict) -> None:
+    assert isinstance(item, dict), f'not a dict: {item!r}'
+    assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
+    assert isinstance(item.get('name'), str), f'name missing or not str: {item.get('name')!r}'
+    assert isinstance(item.get('status'), bool), (f'status missing or'
+                                                  f' not bool: {item.get('status')!r}')
