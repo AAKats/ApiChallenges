@@ -78,8 +78,13 @@ def test_007_create_minimal_body_todo(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(23)
-def test_008_create_full_body_todo(api_client):
-    body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
+@pytest.mark.parametrize('case_info, title',[
+    ('Кейс 08.01 - title = 1 cимвол','T'),
+    ('Кейс 08.02 - title = 49 cимволов','t'*49),
+    ('Кейс 08.03 - title = 50 cимволов','T'*50)
+])
+def test_008_create_full_body_todo(api_client, case_info, title):
+    body = {'title': title, 'doneStatus': True, 'description': 'test description'}
     response = api_client.post(TODOS_PATH, json=body)
     payload = response.json()
     new_id = payload['id']
@@ -146,13 +151,8 @@ def test_010_patch_done_status(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(41)
-@pytest.mark.parametrize('case_info, title',[
-    ('Кейс 11.01 - title = 1 cимвол','T'),
-    ('Кейс 11.02 - title = 49 cимволов','t'*49),
-    ('Кейс 11.03 - title = 50 cимволов','T'*50)
-])
-def test_011_delete_todo(api_client, case_info, title):
-    post_body = {'title': title, 'doneStatus': False, 'description': 'test description'}
+def test_011_delete_todo(api_client):
+    post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response = api_client.post(TODOS_PATH, json=post_body)
     post_payload = response.json()
     new_id = post_payload['id']
