@@ -38,6 +38,7 @@ markers = [                     # объявляем маркеры, чтобы 
     'smoke: quick checks',
     'regression: full suite',
     'negative: negative scenarios',
-    'positive: positive scenarios'
+    'positive: positive scenarios',
+    'challenge: id API-челленджа, которому соответствует тест'
 ]
 addopts = '-ra --strict-markers'

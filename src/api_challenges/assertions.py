@@ -31,3 +31,11 @@ def assert_todo_item(item: dict) -> None:
         f'done status missing or not bool: {item.get('doneStatus')!r}'
     assert isinstance(item.get('description'), str), \
         f'description missing or not str: {item.get('description')!r}'
+
+def assert_todo_item_matches(*, item: dict, expected: dict) -> None:
+    for field, expected_value in expected.items():
+        if field not in item or item[field] != expected_value:
+            raise AssertionError(
+                f'todo field {field!r} mismatch: expected {expected_value!r}, '
+                f'got {item.get(field)!r}'
+            )
