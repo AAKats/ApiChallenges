@@ -39,3 +39,25 @@ def assert_todo_item_matches(*, item: dict, expected: dict) -> None:
                 f'todo field {field!r} mismatch: expected {expected_value!r}, '
                 f'got {item.get(field)!r}'
             )
+
+def assert_sorted(items, sort_by):
+    fields = []
+    for part in sort_by.split(','):
+        part = part.strip()
+        desc = part.startswith('-')
+        fields.append((part.lstrip('+-'), desc))
+    for left, right in zip(items, items[1:]):
+        for field, desc in fields:
+            left_val, right_val = left[field], right[field]
+            if left_val == right_val:
+                continue
+            if desc:
+                assert left_val > right_val, f'Incorrect order for {field} desc'
+            else:
+                assert left_val < right_val, f'Incorrect order for {field} asc'
+            break
+
+def assert_error_message(item, *, error_message):
+    response_error_message = item['errorMessages'][0]
+    assert response_error_message == error_message, \
+        f'Incorrect error message: {response_error_message}, should be: {error_message}'

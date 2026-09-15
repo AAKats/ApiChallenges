@@ -1,15 +1,18 @@
 import fnmatch
+import json
 import re
 
 import pytest
 
 from api_challenges.assertions import (
     assert_content_type,
+    assert_error_message,
+    assert_sorted,
     assert_status_code,
     assert_todo_item,
     assert_todo_item_matches,
 )
-from api_challenges.clients import TODOS_PATH
+from api_challenges.clients import TODOS_PATH, ApiError
 
 
 @pytest.mark.positive
@@ -171,3 +174,143 @@ def test_023_description_wildcard(api_client, case_info, description, wildcard):
             f'Incorrect description: {todo['description']}, should contain: {wildcard}'
     finally:
         api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(13)
+def test_024_sort_by_title_asc(api_client):
+    body = {'title': 'Aaa sort', 'doneStatus': False, 'description': 'sort test'}
+    post_response = api_client.post(TODOS_PATH, json=body)
+    post_payload = post_response.json()
+    new_id = post_payload['id']
+    try:
+        response = api_client.get(f'{TODOS_PATH}?_sortBy=title')
+        payload = response.json()
+        assert_status_code(response=response, expected_status_code=200)
+        assert_content_type(response=response, expected_content_type='application/json')
+        todos = payload['todos']
+        assert_sorted(todos, 'title')
+        assert new_id in {t['id'] for t in todos}, 'Sorted response should include created todo'
+    finally:
+        api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(14)
+def test_025_sort_by_id_desc(api_client):
+    response = api_client.get(f'{TODOS_PATH}?_sortBy=-id')
+    payload = response.json()
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    todos = payload['todos']
+    assert_sorted(todos, '-id')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(15)
+def test_026_sort_multi(api_client):
+    response = api_client.get(f'{TODOS_PATH}?_sortBy=doneStatus,-id')
+    payload = response.json()
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    todos = payload['todos']
+    assert_sorted(todos, 'doneStatus,-id')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(16)
+def test_027_filter_and_sort(api_client):
+    response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_sortBy=-id')
+    payload = response.json()
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    todos = payload['todos']
+    assert_sorted(todos, '-id')
+    for todo in todos:
+        assert_todo_item(todo)
+        assert not todo['doneStatus'], (f'Incorrect todo doneStatus: {todo['doneStatus']},'
+                                        f' should be False')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(17)
+def test_028_limit_8(api_client):
+    response = api_client.get(f'{TODOS_PATH}?_limit=8')
+    payload = response.json()
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    todos = payload['todos']
+    assert len(todos) == 8, f'Incorrect count of todos: {len(todos)}, should_be 8'
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(18)
+def test_029_limit_and_offset(api_client):
+    first_response = api_client.get(f'{TODOS_PATH}?_limit=5&_offset=0')
+    assert_status_code(response=first_response, expected_status_code=200)
+    first_todos = first_response.json()['todos']
+    assert len(first_todos) == 5, f'Incorrect count of todos expected 5, got {len(first_todos)}'
+
+    second_response = api_client.get(f'{TODOS_PATH}?&_limit=5&_offset=5')
+    assert_status_code(response=second_response, expected_status_code=200)
+    second_todos = second_response.json()['todos']
+    assert len(second_todos) == 5, f'Incorrect count of todos expected 5, got {len(second_todos)}'
+
+    first_ids = {t['id'] for t in first_todos}
+    second_ids = {t['id'] for t in second_todos}
+    assert first_ids.isdisjoint(second_ids), \
+        f'Pages overlap: {first_ids & second_ids}'
+
+@pytest.mark.negative
+@pytest.mark.regression
+@pytest.mark.challenge(19)
+def test_030_limit_too_high(api_client):
+    with pytest.raises(ApiError) as exc:
+        api_client.get(f'{TODOS_PATH}?_limit=99999')
+    assert exc.value.status_code == 400
+    payload = json.loads(exc.value.body)
+    assert_error_message(payload,error_message='_limit must be no more than 20')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(20)
+def test_031_sort_and_limit_and_offset(api_client):
+    first_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=0')
+    assert_status_code(response=first_response, expected_status_code=200)
+    first_todos = first_response.json()['todos']
+    assert len(first_todos) == 5, f'Incorrect count of todos expected 5, got {len(first_todos)}'
+    assert_sorted(first_todos, '-id')
+
+    second_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=5')
+    assert_status_code(response=second_response, expected_status_code=200)
+    second_todos = second_response.json()['todos']
+    assert len(second_todos) == 5, f'Incorrect count of todos expected 5, got {len(second_todos)}'
+    assert_sorted(second_todos, '-id')
+
+    first_ids = {t['id'] for t in first_todos}
+    second_ids = {t['id'] for t in second_todos}
+    assert first_ids.isdisjoint(second_ids), \
+        f'Pages overlap: {first_ids & second_ids}'
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(21)
+def test_032_filter_and_limit_and_offset(api_client):
+    first_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=3')
+    assert_status_code(response=first_response, expected_status_code=200)
+    first_todos = first_response.json()['todos']
+    assert len(first_todos) == 2, f'Incorrect count of todos expected 2, got {len(first_todos)}'
+    for todo in first_todos:
+        assert not todo['doneStatus']
+
+    second_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=1')
+    assert_status_code(response=second_response, expected_status_code=200)
+    second_todos = second_response.json()['todos']
+    assert len(second_todos) == 2, f'Incorrect count of todos expected 2, got {len(second_todos)}'
+    for todo in second_todos:
+        assert not todo['doneStatus']
+
+    first_ids = {t['id'] for t in first_todos}
+    second_ids = {t['id'] for t in second_todos}
+    assert first_ids.isdisjoint(second_ids), \
+        f'Pages overlap: {first_ids & second_ids}'
