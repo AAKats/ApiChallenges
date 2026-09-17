@@ -66,6 +66,12 @@ class BaseClient:
     def delete(self, path: str, **kwargs: Any) -> httpx.Response:
         return self.request('DELETE', path, **kwargs)
 
+    def head(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request('HEAD', path, **kwargs)
+
+    def query(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request('QUERY', path, **kwargs)
+
     def create_challenger(self) -> str:
         self.post(CHALLENGER_PATH)
         guid = self.challenger
@@ -81,6 +87,7 @@ class BaseClient:
 
     def close(self) -> None:
         self._client.close()
+
 
 
 
