@@ -8,8 +8,18 @@ from api_challenges.assertions import (
     assert_status_code,
     assert_todo_item,
     assert_todo_item_matches,
+    assert_todo_item_matches_xml,
+    assert_todo_item_xml,
 )
 from api_challenges.clients import TODOS_PATH, ApiError
+from api_challenges.utils import (
+    request_todo_from_xml,
+    todo_from_xml,
+    todos_from_csv,
+    todos_from_html,
+    todos_from_tsv,
+    todos_from_xml,
+)
 
 
 @pytest.mark.positive
@@ -531,3 +541,292 @@ def test_050_json_patch(api_client):
         assert_todo_item_matches(item=patch_payload, expected=patch_expected)
     finally:
         api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(48)
+def test_051_options(api_client):
+    response = api_client.options(TODOS_PATH)
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='text/plain')
+    assert response.content == b''
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(49)
+def test_052_get_todos_xml(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': 'application/xml'
+    })
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/xml')
+    for todo in todos_from_xml(response.text):
+        assert_todo_item(todo)
+
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(51)
+def test_053_get_todos_any(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': '*/*'
+    })
+    payload = response.json()
+    todos = payload['todos']
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    for todo in todos:
+        assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(53)
+def test_054_get_todos_no_accept(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': ''
+    })
+    payload = response.json()
+    todos = payload['todos']
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    for todo in todos:
+        assert_todo_item(todo)
+
+@pytest.mark.negative
+@pytest.mark.regression
+@pytest.mark.challenge(54)
+def test_055_get_todos_no_acceptable(api_client):
+    with pytest.raises(ApiError) as exc:
+        api_client.get(TODOS_PATH, headers={
+            'Accept': 'application/gzip'
+        })
+    assert exc.value.status_code == 406
+    assert_error_message(json.loads(exc.value.body),
+                     error_message='Unrecognised Accept Type')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(55)
+@pytest.mark.parametrize('case_info, done_status, expected_status', [
+    ('Кейс 56.1 - doneStatus = false', False, 'NEEDS-ACTION'),
+    ('Кейс 56.2 - doneStatus = true',  True,  'COMPLETED'),
+])
+def test_056_get_todo_calendar(api_client, case_info, done_status, expected_status):
+    create_body = {'title': 'calendar', 'doneStatus': done_status,
+                   'description': 'test description'}
+    create_response = api_client.post(TODOS_PATH, json=create_body)
+    create_payload = create_response.json()
+    new_id = create_payload['id']
+    try:
+        assert_status_code(response=create_response, expected_status_code=201)
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
+
+        calendar_response = api_client.get(f'{TODOS_PATH}/{new_id}',
+                                           headers={'Accept': 'text/calendar'})
+        assert_status_code(response=calendar_response, expected_status_code=200)
+        assert_content_type(response=calendar_response, expected_content_type='text/calendar')
+        lines = calendar_response.text.split('\r\n')
+        assert lines[0] == 'BEGIN:VCALENDAR' and lines[-1] == 'END:VCALENDAR'
+        for key, value in {
+            'UID': f'todo-{new_id}@apichallenges',
+            'SUMMARY': create_body['title'],
+            'DESCRIPTION': create_body['description'],
+            'STATUS': expected_status,
+        }.items():
+            assert f'{key}:{value}' in lines, f'{key} mismatch: {calendar_response.text!r}'
+    finally:
+        api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(56)
+def test_057_get_todos_q_xml_preferred(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': 'application/json;q=0.5, application/xml;q=1'
+    })
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/xml')
+    for todo in todos_from_xml(response.text):
+        assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(57)
+def test_058_get_todos_q_json_preferred(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': 'application/xml;q=0.5, application/json;q=1'
+    })
+    payload = response.json()
+    todos = payload['todos']
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    for todo in todos:
+        assert_todo_item(todo)
+
+@pytest.mark.negative
+@pytest.mark.regression
+@pytest.mark.challenge(58)
+def test_059_get_todos_q_reject_all(api_client):
+    with pytest.raises(ApiError) as exc:
+        api_client.get(TODOS_PATH, headers={
+            'Accept': 'application/json;q=0, application/xml;q=0'
+        })
+    assert exc.value.status_code == 406
+    assert_error_message(json.loads(exc.value.body),
+                     error_message='No acceptable response type supported')
+
+@pytest.mark.negative
+@pytest.mark.regression
+@pytest.mark.challenge(59)
+def test_060_get_todos_usupported_and_json(api_client):
+    with pytest.raises(ApiError) as exc:
+        api_client.get(TODOS_PATH, headers={
+            'Accept': 'application/problem+json'
+        })
+    assert exc.value.status_code == 406
+    assert_error_message(json.loads(exc.value.body),
+                     error_message='Unrecognised Accept Type')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(60)
+def test_061_get_todos_text_and_xml(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': 'text/xml'
+    })
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='text/xml')
+    for todo in todos_from_xml(response.text):
+        assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(61)
+def test_062_get_todos_vendor_xml(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': 'application/vnd.apichallenges.todo+xml'
+    })
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response,
+                        expected_content_type='application/vnd.apichallenges.todo+xml')
+    for todo in todos_from_xml(response.text):
+        assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(62)
+def test_063_get_todos_xml_wildcard(api_client):
+    response = api_client.get(TODOS_PATH, headers={
+        'Accept': 'application/*+xml'
+    })
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response,
+                        expected_content_type='application/todo+xml')
+    for todo in todos_from_xml(response.text):
+        assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(63)
+def test_064_post_todo_xml(api_client):
+    body= ('''
+           <todo>
+           <title>test title</title>
+           <doneStatus>true</doneStatus>
+           <description>created from XML</description>
+           </todo>
+           ''')
+    create_response = api_client.post(TODOS_PATH, content=body,
+                               headers={'Content-Type': 'application/xml',
+                                        'Accept': 'application/xml'})
+    new_id = todo_from_xml(create_response.text)['id']
+    try:
+        assert_status_code(response=create_response, expected_status_code=201)
+        assert_content_type(response=create_response,
+                            expected_content_type='application/xml')
+        assert_todo_item_xml(create_response.text)
+        assert_todo_item_matches_xml(item=create_response.text,
+                                     expected={'title': 'test title',
+                                               'doneStatus': True,
+                                               'description': 'created from XML'})
+    finally:
+        api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(65)
+def test_065_post_todo_vendor_xml(api_client):
+    body= ('''
+           <todo>
+           <title>test title</title>
+           <doneStatus>true</doneStatus>
+           <description>created with vendor XML</description>
+           </todo>
+           ''')
+    create_response = api_client.post(TODOS_PATH, content=body,
+                               headers={'Content-Type': 'application/vnd.apichallenges.todo+xml',
+                                        'Accept': 'application/json'})
+    create_payload = create_response.json()
+    new_id = create_payload['id']
+    try:
+        assert_status_code(response=create_response, expected_status_code=201)
+        assert_content_type(response=create_response,
+                            expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=request_todo_from_xml(body))
+    finally:
+        api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+@pytest.mark.negative
+@pytest.mark.regression
+@pytest.mark.challenge(66)
+def test_066_post_unsupported_content_type(api_client):
+    body = {"title":"solution widget todo","doneStatus":True,
+            "description":"created from the solution page"}
+    with pytest.raises(ApiError) as exc:
+        api_client.post(TODOS_PATH, json=body, headers={
+            'Content-Type': 'application/gzip',
+            'Accept': 'application/json'
+        })
+    assert exc.value.status_code == 415
+    assert_error_message(json.loads(exc.value.body),
+                         error_message='Unsupported Content Type - application/gzip')
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(67)
+def test_067_get_csv_export(api_client):
+        get_response = api_client.get(f'{TODOS_PATH}/export?format=csv',
+                                         headers={'Accept': 'text/csv'})
+        assert_status_code(response=get_response, expected_status_code=200)
+        assert_content_type(response=get_response, expected_content_type='text/csv')
+        todos = todos_from_csv(get_response.text)
+        for todo in todos:
+            assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(68)
+def test_068_get_html_export(api_client):
+        get_response = api_client.get(f'{TODOS_PATH}/export?format=html',
+                                         headers={'Accept': 'text/html'})
+        assert_status_code(response=get_response, expected_status_code=200)
+        assert_content_type(response=get_response, expected_content_type='text/html')
+        todos = todos_from_html(get_response.text)
+        for todo in todos:
+            assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(69)
+def test_069_get_tab_delimited_export(api_client):
+        get_response = api_client.get(f'{TODOS_PATH}/export?format=tsv',
+                                         headers={'Accept': 'text/tab-separated-values'})
+        assert_status_code(response=get_response, expected_status_code=200)
+        assert_content_type(response=get_response,
+                            expected_content_type='text/tab-separated-values')
+        todos = todos_from_tsv(get_response.text)
+        for todo in todos:
+            assert_todo_item(todo)

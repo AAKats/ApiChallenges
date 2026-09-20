@@ -1,5 +1,7 @@
 import httpx
 
+from api_challenges.utils import todo_from_xml
+
 
 def assert_status_code(*, response: httpx.Response, expected_status_code: int) -> None:
     status_code = response.status_code
@@ -61,3 +63,9 @@ def assert_error_message(item, *, error_message):
     response_error_message = item['errorMessages'][0]
     assert response_error_message == error_message, \
         f'Incorrect error message: {response_error_message}, should be: {error_message}'
+
+def assert_todo_item_xml(item: str) -> None:
+    assert_todo_item(todo_from_xml(item))
+
+def assert_todo_item_matches_xml(*, item: str, expected: dict) -> None:
+    assert_todo_item_matches(item=todo_from_xml(item), expected=expected)

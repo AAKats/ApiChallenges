@@ -69,6 +69,9 @@ class BaseClient:
     def head(self, path: str, **kwargs: Any) -> httpx.Response:
         return self.request('HEAD', path, **kwargs)
 
+    def options(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request('OPTIONS', path, **kwargs)
+
     def query(self, path: str, **kwargs: Any) -> httpx.Response:
         return self.request('QUERY', path, **kwargs)
 
