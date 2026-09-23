@@ -69,3 +69,8 @@ def assert_todo_item_xml(item: str) -> None:
 
 def assert_todo_item_matches_xml(*, item: str, expected: dict) -> None:
     assert_todo_item_matches(item=todo_from_xml(item), expected=expected)
+
+def assert_todo_item_for_user_in_db(item: dict) -> None:
+    assert isinstance(item, dict), f'not a dict: {item!r}'
+    assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
+    assert isinstance(item.get('title'), str), f'title missing or not str: {item.get('title')!r}'

@@ -1,6 +1,7 @@
 import csv
 import io
 import re
+import uuid
 import xml.etree.ElementTree as ET
 from html import unescape
 
@@ -79,3 +80,8 @@ def todos_from_csv(csv_text: str) -> list[dict]:
 
 def todos_from_tsv(tsv_text: str) -> list[dict]:
     return _todos_from_delimited(tsv_text, delimiter='\t')
+
+def generate_guid() -> str:
+    guid = str(uuid.uuid4())
+    print(f'Generated guid: {guid}')
+    return guid
