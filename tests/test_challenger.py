@@ -11,6 +11,7 @@ from api_challenges.assertions import (
 from api_challenges.clients import CHALLENGER_HEADER, CHALLENGER_PATH, ApiError
 from api_challenges.utils import generate_guid
 
+
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(70)

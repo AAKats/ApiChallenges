@@ -830,3 +830,54 @@ def test_069_get_tab_delimited_export(api_client):
         todos = todos_from_tsv(get_response.text)
         for todo in todos:
             assert_todo_item(todo)
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(78)
+def test_078_xml_to_json(api_client):
+    body= ('''
+           <todo>
+           <title>test title</title>
+           <doneStatus>true</doneStatus>
+           <description>created from XML</description>
+           </todo>
+           ''')
+    create_response = api_client.post(TODOS_PATH, content=body,
+                               headers={'Content-Type': 'application/xml',
+                                        'Accept': 'application/json'})
+    payload = create_response.json()
+    new_id = payload['id']
+    try:
+        assert_status_code(response=create_response, expected_status_code=201)
+        assert_content_type(response=create_response,
+                            expected_content_type='application/json')
+        assert_todo_item(payload)
+        assert_todo_item_matches(item=payload, expected={'title': 'test title',
+                                                        'doneStatus': True,
+                                                        'description': 'created from XML'})
+    finally:
+        api_client.delete(f'{TODOS_PATH}/{new_id}')
+
+
+@pytest.mark.positive
+@pytest.mark.regression
+@pytest.mark.challenge(79)
+def test_079_json_to_xml(api_client):
+    body= {'title': 'test title',
+           'doneStatus': True,
+           'description': 'created from XML'}
+    create_response = api_client.post(TODOS_PATH, json=body,
+                               headers={'Content-Type': 'application/json',
+                                        'Accept': 'application/xml'})
+    new_id = todo_from_xml(create_response.text)['id']
+    try:
+        assert_status_code(response=create_response, expected_status_code=201)
+        assert_content_type(response=create_response,
+                            expected_content_type='application/xml')
+        assert_todo_item_xml(create_response.text)
+        assert_todo_item_matches_xml(item=create_response.text,
+                                     expected={'title': 'test title',
+                                               'doneStatus': True,
+                                               'description': 'created from XML'})
+    finally:
+        api_client.delete(f'{TODOS_PATH}/{new_id}')
