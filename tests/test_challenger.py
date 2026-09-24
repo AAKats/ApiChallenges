@@ -123,6 +123,7 @@ def test_075_create_guid(api_client):
         CHALLENGER_HEADER: guid
     }, json=create_payload)
     assert_status_code(response=put_response, expected_status_code=201)
+    api_client.use_challenger(guid)
     assert_content_type(response=put_response, expected_content_type='application/json')
 
 @pytest.mark.positive
@@ -156,6 +157,12 @@ def test_077_update_todos_database(api_client):
     todos = get_payload['todos']
     for todo in todos:
         assert_todo_item_for_user_in_db(todo)
+    new_todo = {
+        'id': max(todo['id'] for todo in todos)+1,
+        'title': 'New todo',
+        'description': 'New todo description'
+    }
+    get_payload['todos'].append(new_todo)
     put_response = api_client.put(f'{CHALLENGER_PATH}/database/{guid}', headers={
         'Accept': 'application/json',
         CHALLENGER_HEADER: guid

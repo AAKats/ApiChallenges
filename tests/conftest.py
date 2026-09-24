@@ -1,8 +1,9 @@
+import os
 from collections.abc import Iterator
 
 import pytest
 
-from api_challenges.clients import BaseClient
+from api_challenges.clients import CHALLENGER_HEADER, BaseClient
 from api_challenges.config import Settings, get_settings
 
 
@@ -12,9 +13,12 @@ def settings() -> Settings:
 
 @pytest.fixture(scope='session')
 def api_client(settings) -> Iterator[BaseClient]:
+    restore_guid = os.environ.get('API_CHALLENGES_RESTORE_GUID')
+    headers = ({CHALLENGER_HEADER: restore_guid} if restore_guid else None)
     client = BaseClient(
         base_url=settings.api_base_url,
-        timeout=settings.api_timeout_seconds
+        timeout=settings.api_timeout_seconds,
+        headers=headers
     )
     client.create_challenger()
     print(f'X-CHALLENGER: {client.challenger}')

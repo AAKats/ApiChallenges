@@ -6,6 +6,7 @@ CHALLENGER_HEADER = 'X-CHALLENGER'
 CHALLENGER_PATH = '/api/challenger'
 CHALLENGES_PATH = '/api/challenges'
 TODOS_PATH = '/api/todos'
+HEARTBEAT_PATH = '/api/heartbeat'
 
 class ApiError(RuntimeError):
     def __init__(self, method: str, url: str, status_code: int, body: str) -> None:
@@ -75,6 +76,9 @@ class BaseClient:
     def query(self, path: str, **kwargs: Any) -> httpx.Response:
         return self.request('QUERY', path, **kwargs)
 
+    def trace(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request('TRACE', path, **kwargs)
+
     def create_challenger(self) -> str:
         self.post(CHALLENGER_PATH)
         guid = self.challenger
@@ -87,6 +91,9 @@ class BaseClient:
     @property
     def challenger(self) -> str | None:
         return self._headers.get(CHALLENGER_HEADER)
+
+    def use_challenger(self, guid: str) -> None:
+        self._headers[CHALLENGER_HEADER] = guid
 
     def close(self) -> None:
         self._client.close()
