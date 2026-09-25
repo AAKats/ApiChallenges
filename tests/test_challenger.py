@@ -5,6 +5,7 @@ import pytest
 from api_challenges.assertions import (
     assert_content_type,
     assert_error_message,
+    assert_error_status_code,
     assert_status_code,
     assert_todo_item_for_user_in_db,
 )
@@ -95,7 +96,7 @@ def test_074_mismatch_guid(api_client):
             'Accept': 'application/json',
             CHALLENGER_HEADER: guid
         }, json=payload)
-    assert exc.value.status_code == 409
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=409)
     assert_error_message(json.loads(exc.value.body),
                      error_message='URL GUID does not match payload X-CHALLENGER')
 

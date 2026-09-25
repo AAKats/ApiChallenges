@@ -5,6 +5,7 @@ import pytest
 from api_challenges.assertions import (
     assert_content_type,
     assert_error_message,
+    assert_error_status_code,
     assert_status_code,
     assert_todo_item,
     assert_todo_item_matches,
@@ -40,7 +41,7 @@ def test_003_get_todos(api_client):
 def test_004_get_todo_not_plural(api_client):
     with pytest.raises(ApiError) as exc:
         api_client.get('/api/todo')
-    assert exc.value.status_code == 404
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
     assert_error_message(json.loads(exc.value.body),
                          error_message='404 resource Unknown')
 
@@ -70,7 +71,7 @@ def test_005_get_todo_by_id(api_client):
 def test_006_get_todo_not_exist(api_client):
     with pytest.raises(ApiError) as exc:
         api_client.get(f'{TODOS_PATH}/999999')
-    assert exc.value.status_code == 404
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Could not find an instance with todos/999999')
 
@@ -187,7 +188,7 @@ def test_011_delete_todo(api_client):
 
     with pytest.raises(ApiError) as exc:
         api_client.get(f'{TODOS_PATH}/{new_id}')
-    assert exc.value.status_code == 404
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
     assert_error_message(json.loads(exc.value.body),
                          error_message=f'Could not find an instance with todos/{new_id}')
 
@@ -196,7 +197,7 @@ def test_011_delete_todo(api_client):
 def test_012_create_empty_body_todo(api_client):
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json={})
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                          error_message='title : field is mandatory')
 
@@ -207,7 +208,7 @@ def test_013_create_todo_too_long_title(api_client):
     body = {'title': 'T'*51, 'doneStatus': True, 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Failed Validation: Maximum allowable length exceeded for '
                                        'title - maximum allowed is 50')
@@ -218,7 +219,7 @@ def test_014_create_todo_id_in_body(api_client):
     body = {'id': 1, 'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Failed Validation: Invalid Creation: Not allowed to create '
                                        'with id')
@@ -230,7 +231,7 @@ def test_015_create_todo_string_done_status(api_client):
     body = {'title': 'Test title', 'doneStatus': 'True', 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
 
 @pytest.mark.negative
 @pytest.mark.regression
@@ -239,7 +240,7 @@ def test_016_put_not_found(api_client):
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.put(f'{TODOS_PATH}/9999999', json=body)
-    assert exc.value.status_code == 404
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
 
 @pytest.mark.positive
 @pytest.mark.regression
@@ -262,7 +263,7 @@ def test_034_too_long_description(api_client):
                        '153*157*161*165*169*173*177*181*185*189*193*197*201*'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Failed Validation: Maximum allowable length exceeded for '
                          'description - maximum allowed is 200')
@@ -298,7 +299,7 @@ def test_036_content_too_long(api_client):
         'description': 'D'*5001}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
-    assert exc.value.status_code == 413
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=413)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Error: request body too large, max allowed is 5000 bytes')
 
@@ -314,7 +315,7 @@ def test_037_extra_field(api_client):
     }
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Failed Validation: Could not find field: priority')
 
@@ -330,7 +331,7 @@ def test_038_put_to_create(api_client):
     }
     with pytest.raises(ApiError) as exc:
         api_client.put(f'{TODOS_PATH}/9999', json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Cannot create todo with PUT due to Auto fields id')
 
@@ -374,7 +375,7 @@ def test_040_update_via_post_not_exist(api_client):
         'description': 'created from the solution page'}
     with pytest.raises(ApiError) as exc:
         api_client.post(f'{TODOS_PATH}/9999', json=body)
-    assert exc.value.status_code == 404
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
     assert_error_message(json.loads(exc.value.body),
                      error_message='No such todo entity instance with id == 9999 found')
 
@@ -449,7 +450,7 @@ def test_043_update_via_put_no_title(api_client):
         'description': 'created from the solution page'}
     with pytest.raises(ApiError) as exc:
         api_client.put(f'{TODOS_PATH}/10', json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                      error_message='Failed Validation: title : field is mandatory')
 
@@ -463,7 +464,7 @@ def test_044_update_via_put_no_id(api_client):
         'description': 'created from the solution page'}
     with pytest.raises(ApiError) as exc:
         api_client.put(TODOS_PATH, json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                      error_message='PUT requires an identifier in the URI or payload')
 
@@ -478,7 +479,7 @@ def test_045_update_via_put_amend_id(api_client):
         'description': 'created from the solution page'}
     with pytest.raises(ApiError) as exc:
         api_client.put(f'{TODOS_PATH}/3', json=body)
-    assert exc.value.status_code == 422
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
     assert_error_message(json.loads(exc.value.body),
                      error_message='Can not amend id from 3 to 9999')
 
@@ -600,7 +601,7 @@ def test_055_get_todos_no_acceptable(api_client):
         api_client.get(TODOS_PATH, headers={
             'Accept': 'application/gzip'
         })
-    assert exc.value.status_code == 406
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=406)
     assert_error_message(json.loads(exc.value.body),
                      error_message='Unrecognised Accept Type')
 
@@ -673,7 +674,7 @@ def test_059_get_todos_q_reject_all(api_client):
         api_client.get(TODOS_PATH, headers={
             'Accept': 'application/json;q=0, application/xml;q=0'
         })
-    assert exc.value.status_code == 406
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=406)
     assert_error_message(json.loads(exc.value.body),
                      error_message='No acceptable response type supported')
 
@@ -685,7 +686,7 @@ def test_060_get_todos_usupported_and_json(api_client):
         api_client.get(TODOS_PATH, headers={
             'Accept': 'application/problem+json'
         })
-    assert exc.value.status_code == 406
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=406)
     assert_error_message(json.loads(exc.value.body),
                      error_message='Unrecognised Accept Type')
 
@@ -790,7 +791,7 @@ def test_066_post_unsupported_content_type(api_client):
             'Content-Type': 'application/gzip',
             'Accept': 'application/json'
         })
-    assert exc.value.status_code == 415
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=415)
     assert_error_message(json.loads(exc.value.body),
                          error_message='Unsupported Content Type - application/gzip')
 

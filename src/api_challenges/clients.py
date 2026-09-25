@@ -7,6 +7,7 @@ CHALLENGER_PATH = '/api/challenger'
 CHALLENGES_PATH = '/api/challenges'
 TODOS_PATH = '/api/todos'
 HEARTBEAT_PATH = '/api/heartbeat'
+SECRET_PATH = '/api/secret'
 
 class ApiError(RuntimeError):
     def __init__(self, method: str, url: str, status_code: int, body: str) -> None:

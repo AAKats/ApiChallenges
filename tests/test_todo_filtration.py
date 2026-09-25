@@ -7,6 +7,7 @@ import pytest
 from api_challenges.assertions import (
     assert_content_type,
     assert_error_message,
+    assert_error_status_code,
     assert_sorted,
     assert_status_code,
     assert_todo_item,
@@ -267,7 +268,7 @@ def test_029_limit_and_offset(api_client):
 def test_030_limit_too_high(api_client):
     with pytest.raises(ApiError) as exc:
         api_client.get(f'{TODOS_PATH}?_limit=99999')
-    assert exc.value.status_code == 400
+    assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=400)
     payload = json.loads(exc.value.body)
     assert_error_message(payload,error_message='_limit must be no more than 20')
 

@@ -1,19 +1,23 @@
-import re
 
 import pytest
 
-from api_challenges.assertions import assert_challenge_item, assert_content_type, assert_status_code
+from api_challenges.assertions import (
+    assert_challenge_item,
+    assert_content_type,
+    assert_status_code,
+    assert_valid_guid,
+)
 
 pytestmark = pytest.mark.smoke
 
-GUID_RE = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+
 
 @pytest.mark.positive
 @pytest.mark.challenge(1)
 def test_001_challenger_guid_is_valid(api_client):
     guid = api_client.challenger
     assert guid is not None, 'X-CHALLENGER missing: POST /api/challenger was not run in fixture'
-    assert GUID_RE.fullmatch(guid), f'Incorrect GUID format: {guid!r}'
+    assert_valid_guid(guid)
 
 @pytest.mark.positive
 @pytest.mark.challenge(2)

@@ -1,12 +1,26 @@
+import re
+
 import httpx
 
 from api_challenges.utils import todo_from_xml
+
+
+def assert_valid_guid(guid: str) -> None:
+    guid_re = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+    if not guid_re.fullmatch(guid):
+        raise AssertionError(f'Incorrect GUID format: {guid!r}')
 
 
 def assert_status_code(*, response: httpx.Response, expected_status_code: int) -> None:
     status_code = response.status_code
     if status_code != expected_status_code:
         raise AssertionError(f'Incorrect status code {status_code},'
+                             f' should be {expected_status_code}')
+
+
+def assert_error_status_code(*, received_status_code: int, expected_status_code: int) -> None:
+    if received_status_code != expected_status_code:
+        raise AssertionError(f'Incorrect status code {received_status_code},'
                              f' should be {expected_status_code}')
 
 
@@ -74,3 +88,16 @@ def assert_todo_item_for_user_in_db(item: dict) -> None:
     assert isinstance(item, dict), f'not a dict: {item!r}'
     assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
     assert isinstance(item.get('title'), str), f'title missing or not str: {item.get('title')!r}'
+
+def assert_note_item(item: dict) -> None:
+    assert isinstance(item, dict), f'not a dict: {item!r}'
+    assert isinstance(item.get('note'), str), f'note missing or not str: {item.get('note')!r}'
+
+
+def assert_note_item_matches(*, item: dict, expected: dict) -> None:
+    for field, expected_value in expected.items():
+        if field not in item or item[field] != expected_value:
+            raise AssertionError(
+                f'note field {field!r} mismatch: expected {expected_value!r}, '
+                f'got {item.get(field)!r}'
+            )
