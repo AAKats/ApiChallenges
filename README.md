@@ -119,3 +119,20 @@ uv run ruff format --check .
 правила — `F, E, W, I, N, UP, B, C4, SIM, RET, PT, PTH, DTZ, T20, ARG, ERA, S,
 PLE, PLW, RUF` с `per-file-ignores` для тестов (например, `S101`, `S105`, `S106`)
 (см. `pyproject.toml`).
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) запускается на push в `main` и на каждый
+`pull_request`. Никаких секретов и `.env` не требуется: настройки берутся дефолтные
+(`config.py`), каждый прогон работает со свежей throwaway-сессией challenger.
+
+Два job'а:
+
+- `checks` — быстрая обратная связь: `uv sync --frozen`, `ruff check`, `ruff format --check`
+  и smoke-выборка `pytest -m smoke`.
+- `full-suite` — полный регресс из 114 тестов против `https://apichallenges.com`;
+  запускается только после успешного `checks`.
+
+Свежий push в ветку отменяет предыдущий запуск для неё (`concurrency.cancel-in-progress`).
+Локально те же проверки: `uv run ruff check .`, `uv run ruff format --check .`,
+`uv run pytest -m smoke -q`, `uv run pytest -q`.
