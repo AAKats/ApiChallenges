@@ -18,9 +18,7 @@ from api_challenges.clients import CHALLENGER_HEADER, CHALLENGER_PATH, ApiError
 @pytest.mark.challenge(70)
 def test_070_get_challenger_progress(api_client):
     guid = api_client.challenger
-    response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json', CHALLENGER_HEADER: guid}
-    )
+    response = api_client.get(f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
     payload = response.json()
@@ -33,10 +31,7 @@ def test_070_get_challenger_progress(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(71)
 def test_071_restore_progress(api_client):
-    guid = api_client.challenger
-    response = api_client.post(
-        CHALLENGER_PATH, headers={'Accept': 'application/json', CHALLENGER_HEADER: guid}
-    )
+    response = api_client.post(CHALLENGER_PATH, headers={'Accept': 'application/json'})
     assert_status_code(response=response, expected_status_code=200)
     assert response.text == '', f'Unexpected restore body: {response.text!r}'
 
@@ -47,7 +42,7 @@ def test_071_restore_progress(api_client):
 def test_072_get_progress(api_client):
     guid = api_client.challenger
     get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json', CHALLENGER_HEADER: guid}
+        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
     )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -63,7 +58,7 @@ def test_072_get_progress(api_client):
 def test_073_restore_challenger_progress(api_client):
     guid = api_client.challenger
     get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json', CHALLENGER_HEADER: guid}
+        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
     )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -73,7 +68,7 @@ def test_073_restore_challenger_progress(api_client):
     )
     put_response = api_client.put(
         f'{CHALLENGER_PATH}/{guid}',
-        headers={'Accept': 'application/json', CHALLENGER_HEADER: guid},
+        headers={'Accept': 'application/json'},
         json=payload,
     )
     assert_status_code(response=put_response, expected_status_code=200)
@@ -91,7 +86,7 @@ def test_074_mismatch_guid(api_client):
     guid = api_client.challenger
     new_guid = str(uuid.uuid4())
     get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json', CHALLENGER_HEADER: guid}
+        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
     )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -118,7 +113,7 @@ def test_075_create_guid(api_client):
     guid = api_client.challenger
     new_guid = str(uuid.uuid4())
     get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json', CHALLENGER_HEADER: guid}
+        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
     )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -150,7 +145,7 @@ def test_076_current_todos_database(api_client):
     guid = api_client.challenger
     get_response = api_client.get(
         f'{CHALLENGER_PATH}/database/{guid}',
-        headers={'Accept': 'application/json', CHALLENGER_HEADER: guid},
+        headers={'Accept': 'application/json'},
     )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -167,7 +162,7 @@ def test_077_update_todos_database(api_client):
     guid = api_client.challenger
     get_response = api_client.get(
         f'{CHALLENGER_PATH}/database/{guid}',
-        headers={'Accept': 'application/json', CHALLENGER_HEADER: guid},
+        headers={'Accept': 'application/json'},
     )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -183,7 +178,7 @@ def test_077_update_todos_database(api_client):
     get_payload['todos'].append(new_todo)
     put_response = api_client.put(
         f'{CHALLENGER_PATH}/database/{guid}',
-        headers={'Accept': 'application/json', CHALLENGER_HEADER: guid},
+        headers={'Accept': 'application/json'},
         json=get_payload,
     )
     assert_status_code(response=put_response, expected_status_code=204)

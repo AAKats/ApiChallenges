@@ -33,30 +33,24 @@ def test_017_done_status_false(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(7)
-def test_018_done_status_true(api_client):
+def test_018_done_status_true(api_client, todo_factory):
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    post_response = api_client.post(TODOS_PATH, json=body)
-    try:
-        assert_status_code(response=post_response, expected_status_code=201)
-        post_payload = post_response.json()
-        new_id = post_payload['id']
-        assert_content_type(response=post_response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
+    post_response, post_payload = todo_factory(json=body)
+    assert_content_type(response=post_response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=body)
 
-        get_response = api_client.get(f'{TODOS_PATH}?doneStatus=true')
-        assert_status_code(response=get_response, expected_status_code=200)
-        get_payload = get_response.json()
-        todos = get_payload['todos']
-        assert post_payload['id'] in {t['id'] for t in todos}, (
-            'Filter did not include the created doneStatus=true todo'
-        )
-        assert_content_type(response=get_response, expected_content_type='application/json')
-        for todo in todos:
-            assert_todo_item(todo)
-            assert_todo_item_matches(item=todo, expected={'doneStatus': True})
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    get_response = api_client.get(f'{TODOS_PATH}?doneStatus=true')
+    assert_status_code(response=get_response, expected_status_code=200)
+    get_payload = get_response.json()
+    todos = get_payload['todos']
+    assert post_payload['id'] in {t['id'] for t in todos}, (
+        'Filter did not include the created doneStatus=true todo'
+    )
+    assert_content_type(response=get_response, expected_content_type='application/json')
+    for todo in todos:
+        assert_todo_item(todo)
+        assert_todo_item_matches(item=todo, expected={'doneStatus': True})
 
 
 @pytest.mark.positive
@@ -125,33 +119,27 @@ def test_021_id_equal_filter_id(api_client, _case_info, id):
         ('Кейс 22.02 - regexp = .*regex.*', 'Test description regexp 22.02', r'.*regex.*'),
     ],
 )
-def test_022_description_regexp(api_client, _case_info, description, regexp):
+def test_022_description_regexp(api_client, _case_info, description, regexp, todo_factory):
     test_regexp = re.compile(regexp)
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
-    post_response = api_client.post(TODOS_PATH, json=body)
-    post_payload = post_response.json()
-    new_id = post_payload['id']
-    try:
-        assert_status_code(response=post_response, expected_status_code=201)
-        assert_content_type(response=post_response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
+    post_response, post_payload = todo_factory(json=body)
+    assert_content_type(response=post_response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=body)
 
-        get_response = api_client.get(f'{TODOS_PATH}?description~={regexp}')
-        assert_status_code(response=get_response, expected_status_code=200)
-        get_payload = get_response.json()
-        todos = get_payload['todos']
-        assert_content_type(response=get_response, expected_content_type='application/json')
-        assert post_payload['description'] in {t['description'] for t in todos}, (
-            f'Filter did not include the created description = {description} todo'
+    get_response = api_client.get(f'{TODOS_PATH}?description~={regexp}')
+    assert_status_code(response=get_response, expected_status_code=200)
+    get_payload = get_response.json()
+    todos = get_payload['todos']
+    assert_content_type(response=get_response, expected_content_type='application/json')
+    assert post_payload['description'] in {t['description'] for t in todos}, (
+        f'Filter did not include the created description = {description} todo'
+    )
+    for todo in todos:
+        assert_todo_item(todo)
+        assert test_regexp.fullmatch(todo['description']), (
+            f'Incorrect description format: {todo['description']}'
         )
-        for todo in todos:
-            assert_todo_item(todo)
-            assert test_regexp.fullmatch(todo['description']), (
-                f'Incorrect description format: {todo['description']}'
-            )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
 
 
 @pytest.mark.positive
@@ -164,52 +152,42 @@ def test_022_description_regexp(api_client, _case_info, description, regexp):
         ('Кейс 23.02 - wildcard = *wildcard*', 'Test description wildcard 23.02', '*wildcard*'),
     ],
 )
-def test_023_description_wildcard(api_client, _case_info, description, wildcard):
+def test_023_description_wildcard(api_client, _case_info, description, wildcard, todo_factory):
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
-    post_response = api_client.post(TODOS_PATH, json=body)
-    post_payload = post_response.json()
-    new_id = post_payload['id']
-    try:
-        assert_status_code(response=post_response, expected_status_code=201)
-        assert_content_type(response=post_response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
+    post_response, post_payload = todo_factory(json=body)
+    assert_content_type(response=post_response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=body)
 
-        get_response = api_client.get(f'{TODOS_PATH}?description*={wildcard}')
-        assert_status_code(response=get_response, expected_status_code=200)
-        get_payload = get_response.json()
-        todos = get_payload['todos']
-        assert_content_type(response=get_response, expected_content_type='application/json')
-        assert post_payload['description'] in {t['description'] for t in todos}, (
-            f'Filter did not include the created description = {description} todo'
+    get_response = api_client.get(f'{TODOS_PATH}?description*={wildcard}')
+    assert_status_code(response=get_response, expected_status_code=200)
+    get_payload = get_response.json()
+    todos = get_payload['todos']
+    assert_content_type(response=get_response, expected_content_type='application/json')
+    assert post_payload['description'] in {t['description'] for t in todos}, (
+        f'Filter did not include the created description = {description} todo'
+    )
+    for todo in todos:
+        assert_todo_item(todo)
+        assert fnmatch.fnmatchcase(todo['description'], wildcard), (
+            f'Incorrect description: {todo['description']}, should contain: {wildcard}'
         )
-        for todo in todos:
-            assert_todo_item(todo)
-            assert fnmatch.fnmatchcase(todo['description'], wildcard), (
-                f'Incorrect description: {todo['description']}, should contain: {wildcard}'
-            )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(13)
-def test_024_sort_by_title_asc(api_client):
+def test_024_sort_by_title_asc(api_client, todo_factory):
     body = {'title': 'Aaa sort', 'doneStatus': False, 'description': 'sort test'}
-    post_response = api_client.post(TODOS_PATH, json=body)
-    post_payload = post_response.json()
+    _, post_payload = todo_factory(json=body)
     new_id = post_payload['id']
-    try:
-        response = api_client.get(f'{TODOS_PATH}?_sortBy=title')
-        payload = response.json()
-        assert_status_code(response=response, expected_status_code=200)
-        assert_content_type(response=response, expected_content_type='application/json')
-        todos = payload['todos']
-        assert_sorted(todos, 'title')
-        assert new_id in {t['id'] for t in todos}, 'Sorted response should include created todo'
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    response = api_client.get(f'{TODOS_PATH}?_sortBy=title')
+    payload = response.json()
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    todos = payload['todos']
+    assert_sorted(todos, 'title')
+    assert new_id in {t['id'] for t in todos}, 'Sorted response should include created todo'
 
 
 @pytest.mark.positive

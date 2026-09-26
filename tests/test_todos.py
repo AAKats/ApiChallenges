@@ -15,7 +15,6 @@ from api_challenges.assertions import (
 from api_challenges.clients import TODOS_PATH, ApiError
 from api_challenges.utils import (
     request_todo_from_xml,
-    todo_from_xml,
     todos_from_csv,
     todos_from_html,
     todos_from_tsv,
@@ -81,21 +80,16 @@ def test_006_get_todo_not_exist(api_client):
 @pytest.mark.positive
 @pytest.mark.smoke
 @pytest.mark.challenge(23)
-def test_007_create_minimal_body_todo(api_client):
+def test_007_create_minimal_body_todo(todo_factory):
     body = {'title': 'Test title'}
-    response = api_client.post(TODOS_PATH, json=body)
-    payload = response.json()
+    response, payload = todo_factory(json=body)
     new_id = payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(payload)
-        assert_todo_item_matches(item=payload, expected=body)
-        assert response.headers.get('Location') == f'{TODOS_PATH}/{new_id}', (
-            f'Unexpected Location: {response.headers.get('Location')!r}'
-        )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(payload)
+    assert_todo_item_matches(item=payload, expected=body)
+    assert response.headers.get('Location') == f'{TODOS_PATH}/{new_id}', (
+        f'Unexpected Location: {response.headers.get('Location')!r}'
+    )
 
 
 @pytest.mark.positive
@@ -109,73 +103,58 @@ def test_007_create_minimal_body_todo(api_client):
         ('Кейс 08.03 - title = 50 symbols', 'T' * 50),
     ],
 )
-def test_008_create_full_body_todo(api_client, _case_info, title):
+def test_008_create_full_body_todo(_case_info, title, todo_factory):
     body = {'title': title, 'doneStatus': True, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=body)
-    payload = response.json()
+    response, payload = todo_factory(json=body)
     new_id = payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(payload)
-        assert_todo_item_matches(item=payload, expected=body)
-        assert response.headers.get('Location') == f'{TODOS_PATH}/{new_id}', (
-            f'Unexpected Location: {response.headers.get('Location')!r}'
-        )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(payload)
+    assert_todo_item_matches(item=payload, expected=body)
+    assert response.headers.get('Location') == f'{TODOS_PATH}/{new_id}', (
+        f'Unexpected Location: {response.headers.get('Location')!r}'
+    )
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(34)
-def test_009_put_title_partial(api_client):
+def test_009_put_title_partial(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=post_body)
-    post_payload = response.json()
+    response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=post_body)
 
-        put_body = {'title': 'test updated title'}
-        put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
-        put_payload = put_response.json()
-        put_expected = {'title': put_body['title'], 'doneStatus': False, 'description': ''}
-        assert_status_code(response=put_response, expected_status_code=200)
-        assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=put_expected)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    put_body = {'title': 'test updated title'}
+    put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
+    put_payload = put_response.json()
+    put_expected = {'title': put_body['title'], 'doneStatus': False, 'description': ''}
+    assert_status_code(response=put_response, expected_status_code=200)
+    assert_content_type(response=put_response, expected_content_type='application/json')
+    assert_todo_item(put_payload)
+    assert_todo_item_matches(item=put_payload, expected=put_expected)
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(45)
-def test_010_patch_done_status(api_client):
+def test_010_patch_done_status(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=post_body)
-    post_payload = response.json()
+    response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=post_body)
 
-        patch_body = {'doneStatus': True}
-        patch_response = api_client.patch(f'{TODOS_PATH}/{new_id}', json=patch_body)
-        patch_payload = patch_response.json()
-        patch_expected = {**post_payload, 'doneStatus': patch_body['doneStatus']}
-        assert_status_code(response=patch_response, expected_status_code=200)
-        assert_content_type(response=patch_response, expected_content_type='application/json')
-        assert_todo_item(patch_payload)
-        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    patch_body = {'doneStatus': True}
+    patch_response = api_client.patch(f'{TODOS_PATH}/{new_id}', json=patch_body)
+    patch_payload = patch_response.json()
+    patch_expected = {**post_payload, 'doneStatus': patch_body['doneStatus']}
+    assert_status_code(response=patch_response, expected_status_code=200)
+    assert_content_type(response=patch_response, expected_content_type='application/json')
+    assert_todo_item(patch_payload)
+    assert_todo_item_matches(item=patch_payload, expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -297,7 +276,7 @@ def test_034_too_long_description(api_client):
 @pytest.mark.negative
 @pytest.mark.regression
 @pytest.mark.challenge(27)
-def test_035_max_out_content(api_client):
+def test_035_max_out_content(todo_factory):
     body = {
         'title': '2*4*6*8*11*14*17*20*23*26*29*32*35*38*41*44*47*50*',
         'doneStatus': True,
@@ -305,16 +284,10 @@ def test_035_max_out_content(api_client):
         '78*81*84*87*90*93*96*100*104*108*112*116*120*124*128*132*136*140*144*148*'
         '152*156*160*164*168*172*176*180*184*188*192*196*200*',
     }
-    response = api_client.post(TODOS_PATH, json=body)
-    post_payload = response.json()
-    new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    response, post_payload = todo_factory(json=body)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=body)
 
 
 @pytest.mark.negative
@@ -372,30 +345,25 @@ def test_038_put_to_create(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(31)
-def test_039_update_via_post(api_client):
+def test_039_update_via_post(api_client, todo_factory):
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
     updated_body = {
         'title': 'solution widget todo',
         'doneStatus': True,
         'description': 'created from the solution page',
     }
-    create_response = api_client.post(TODOS_PATH, json=create_body)
-    create_payload = create_response.json()
+    create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+    assert_content_type(response=create_response, expected_content_type='application/json')
+    assert_todo_item(create_payload)
+    assert_todo_item_matches(item=create_payload, expected=create_body)
 
-        response = api_client.post(f'{TODOS_PATH}/{new_id}', json=updated_body)
-        post_payload = response.json()
-        assert_status_code(response=response, expected_status_code=200)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=updated_body)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    response = api_client.post(f'{TODOS_PATH}/{new_id}', json=updated_body)
+    post_payload = response.json()
+    assert_status_code(response=response, expected_status_code=200)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=updated_body)
 
 
 @pytest.mark.negative
@@ -419,61 +387,51 @@ def test_040_update_via_post_not_exist(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(33)
-def test_041_update_via_put_full(api_client):
+def test_041_update_via_put_full(api_client, todo_factory):
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
-    create_response = api_client.post(TODOS_PATH, json=create_body)
-    create_payload = create_response.json()
+    create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
-        updated_body = {
-            'id': new_id,
-            'title': 'full update widget todo',
-            'doneStatus': True,
-            'description': 'created from the solution page',
-        }
+    assert_content_type(response=create_response, expected_content_type='application/json')
+    assert_todo_item(create_payload)
+    assert_todo_item_matches(item=create_payload, expected=create_body)
+    updated_body = {
+        'id': new_id,
+        'title': 'full update widget todo',
+        'doneStatus': True,
+        'description': 'created from the solution page',
+    }
 
-        put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=updated_body)
-        put_payload = put_response.json()
-        assert_status_code(response=put_response, expected_status_code=200)
-        assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=updated_body)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=updated_body)
+    put_payload = put_response.json()
+    assert_status_code(response=put_response, expected_status_code=200)
+    assert_content_type(response=put_response, expected_content_type='application/json')
+    assert_todo_item(put_payload)
+    assert_todo_item_matches(item=put_payload, expected=updated_body)
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(35)
-def test_042_update_via_put_body_id(api_client):
+def test_042_update_via_put_body_id(api_client, todo_factory):
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
-    create_response = api_client.post(TODOS_PATH, json=create_body)
-    create_payload = create_response.json()
+    create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
-        updated_body = {
-            'id': new_id,
-            'title': 'full update widget todo',
-            'doneStatus': True,
-            'description': 'created from the solution page',
-        }
+    assert_content_type(response=create_response, expected_content_type='application/json')
+    assert_todo_item(create_payload)
+    assert_todo_item_matches(item=create_payload, expected=create_body)
+    updated_body = {
+        'id': new_id,
+        'title': 'full update widget todo',
+        'doneStatus': True,
+        'description': 'created from the solution page',
+    }
 
-        put_response = api_client.put(TODOS_PATH, json=updated_body)
-        put_payload = put_response.json()
-        assert_status_code(response=put_response, expected_status_code=200)
-        assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=updated_body)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    put_response = api_client.put(TODOS_PATH, json=updated_body)
+    put_payload = put_response.json()
+    assert_status_code(response=put_response, expected_status_code=200)
+    assert_content_type(response=put_response, expected_content_type='application/json')
+    assert_todo_item(put_payload)
+    assert_todo_item_matches(item=put_payload, expected=updated_body)
 
 
 @pytest.mark.negative
@@ -527,61 +485,51 @@ def test_045_update_via_put_amend_id(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(46)
-def test_049_merge_patch(api_client):
+def test_049_merge_patch(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=post_body)
-    post_payload = response.json()
+    response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=post_body)
 
-        patch_body = {'description': 'patched with merge patch'}
-        patch_response = api_client.patch(
-            f'{TODOS_PATH}/{new_id}',
-            headers={'Content-Type': 'application/merge-patch+json'},
-            json=patch_body,
-        )
-        patch_payload = patch_response.json()
-        patch_expected = {**post_payload, 'description': 'patched with merge patch'}
-        assert_status_code(response=patch_response, expected_status_code=200)
-        assert_content_type(response=patch_response, expected_content_type='application/json')
-        assert_todo_item(patch_payload)
-        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    patch_body = {'description': 'patched with merge patch'}
+    patch_response = api_client.patch(
+        f'{TODOS_PATH}/{new_id}',
+        headers={'Content-Type': 'application/merge-patch+json'},
+        json=patch_body,
+    )
+    patch_payload = patch_response.json()
+    patch_expected = {**post_payload, 'description': 'patched with merge patch'}
+    assert_status_code(response=patch_response, expected_status_code=200)
+    assert_content_type(response=patch_response, expected_content_type='application/json')
+    assert_todo_item(patch_payload)
+    assert_todo_item_matches(item=patch_payload, expected=patch_expected)
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(47)
-def test_050_json_patch(api_client):
+def test_050_json_patch(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=post_body)
-    post_payload = response.json()
+    response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=post_body)
 
-        patch_body = [{'op': 'replace', 'path': '/title', 'value': 'patched with json patch'}]
-        patch_response = api_client.patch(
-            f'{TODOS_PATH}/{new_id}',
-            headers={'Content-Type': 'application/json-patch+json'},
-            json=patch_body,
-        )
-        patch_payload = patch_response.json()
-        patch_expected = {**post_payload, 'title': 'patched with json patch'}
-        assert_status_code(response=patch_response, expected_status_code=200)
-        assert_content_type(response=patch_response, expected_content_type='application/json')
-        assert_todo_item(patch_payload)
-        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    patch_body = [{'op': 'replace', 'path': '/title', 'value': 'patched with json patch'}]
+    patch_response = api_client.patch(
+        f'{TODOS_PATH}/{new_id}',
+        headers={'Content-Type': 'application/json-patch+json'},
+        json=patch_body,
+    )
+    patch_payload = patch_response.json()
+    patch_expected = {**post_payload, 'title': 'patched with json patch'}
+    assert_status_code(response=patch_response, expected_status_code=200)
+    assert_content_type(response=patch_response, expected_content_type='application/json')
+    assert_todo_item(patch_payload)
+    assert_todo_item_matches(item=patch_payload, expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -651,38 +599,33 @@ def test_055_get_todos_no_acceptable(api_client):
         ('Кейс 56.2 - doneStatus = true', True, 'COMPLETED'),
     ],
 )
-def test_056_get_todo_calendar(api_client, _case_info, done_status, expected_status):
+def test_056_get_todo_calendar(api_client, _case_info, done_status, expected_status, todo_factory):
     create_body = {
         'title': 'calendar',
         'doneStatus': done_status,
         'description': 'test description',
     }
-    create_response = api_client.post(TODOS_PATH, json=create_body)
-    create_payload = create_response.json()
+    create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+    assert_content_type(response=create_response, expected_content_type='application/json')
+    assert_todo_item(create_payload)
+    assert_todo_item_matches(item=create_payload, expected=create_body)
 
-        calendar_response = api_client.get(
-            f'{TODOS_PATH}/{new_id}', headers={'Accept': 'text/calendar'}
-        )
-        assert_status_code(response=calendar_response, expected_status_code=200)
-        assert_content_type(response=calendar_response, expected_content_type='text/calendar')
-        lines = calendar_response.text.split('\r\n')
-        assert lines[0] == 'BEGIN:VCALENDAR'
-        assert lines[-1] == 'END:VCALENDAR'
-        for key, value in {
-            'UID': f'todo-{new_id}@apichallenges',
-            'SUMMARY': create_body['title'],
-            'DESCRIPTION': create_body['description'],
-            'STATUS': expected_status,
-        }.items():
-            assert f'{key}:{value}' in lines, f'{key} mismatch: {calendar_response.text!r}'
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    calendar_response = api_client.get(
+        f'{TODOS_PATH}/{new_id}', headers={'Accept': 'text/calendar'}
+    )
+    assert_status_code(response=calendar_response, expected_status_code=200)
+    assert_content_type(response=calendar_response, expected_content_type='text/calendar')
+    lines = calendar_response.text.split('\r\n')
+    assert lines[0] == 'BEGIN:VCALENDAR'
+    assert lines[-1] == 'END:VCALENDAR'
+    for key, value in {
+        'UID': f'todo-{new_id}@apichallenges',
+        'SUMMARY': create_body['title'],
+        'DESCRIPTION': create_body['description'],
+        'STATUS': expected_status,
+    }.items():
+        assert f'{key}:{value}' in lines, f'{key} mismatch: {calendar_response.text!r}'
 
 
 @pytest.mark.positive
@@ -775,7 +718,7 @@ def test_063_get_todos_xml_wildcard(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(63)
-def test_064_post_todo_xml(api_client):
+def test_064_post_todo_xml(todo_factory):
     body = '''
            <todo>
            <title>test title</title>
@@ -783,28 +726,22 @@ def test_064_post_todo_xml(api_client):
            <description>created from XML</description>
            </todo>
            '''
-    create_response = api_client.post(
-        TODOS_PATH,
+    create_response, _ = todo_factory(
         content=body,
         headers={'Content-Type': 'application/xml', 'Accept': 'application/xml'},
     )
-    new_id = todo_from_xml(create_response.text)['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/xml')
-        assert_todo_item_xml(create_response.text)
-        assert_todo_item_matches_xml(
-            item=create_response.text,
-            expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
-        )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=create_response, expected_content_type='application/xml')
+    assert_todo_item_xml(create_response.text)
+    assert_todo_item_matches_xml(
+        item=create_response.text,
+        expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
+    )
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(65)
-def test_065_post_todo_vendor_xml(api_client):
+def test_065_post_todo_vendor_xml(todo_factory):
     body = '''
            <todo>
            <title>test title</title>
@@ -812,23 +749,16 @@ def test_065_post_todo_vendor_xml(api_client):
            <description>created with vendor XML</description>
            </todo>
            '''
-    create_response = api_client.post(
-        TODOS_PATH,
+    create_response, create_payload = todo_factory(
         content=body,
         headers={
             'Content-Type': 'application/vnd.apichallenges.todo+xml',
             'Accept': 'application/json',
         },
     )
-    create_payload = create_response.json()
-    new_id = create_payload['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=request_todo_from_xml(body))
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=create_response, expected_content_type='application/json')
+    assert_todo_item(create_payload)
+    assert_todo_item_matches(item=create_payload, expected=request_todo_from_xml(body))
 
 
 @pytest.mark.negative
@@ -895,7 +825,7 @@ def test_069_get_tab_delimited_export(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(78)
-def test_078_xml_to_json(api_client):
+def test_078_xml_to_json(todo_factory):
     body = '''
            <todo>
            <title>test title</title>
@@ -903,46 +833,33 @@ def test_078_xml_to_json(api_client):
            <description>created from XML</description>
            </todo>
            '''
-    create_response = api_client.post(
-        TODOS_PATH,
+    create_response, payload = todo_factory(
         content=body,
         headers={'Content-Type': 'application/xml', 'Accept': 'application/json'},
     )
-    payload = create_response.json()
-    new_id = payload['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(payload)
-        assert_todo_item_matches(
-            item=payload,
-            expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
-        )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=create_response, expected_content_type='application/json')
+    assert_todo_item(payload)
+    assert_todo_item_matches(
+        item=payload,
+        expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
+    )
 
 
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(79)
-def test_079_json_to_xml(api_client):
+def test_079_json_to_xml(todo_factory):
     body = {'title': 'test title', 'doneStatus': True, 'description': 'created from XML'}
-    create_response = api_client.post(
-        TODOS_PATH,
+    create_response, _ = todo_factory(
         json=body,
         headers={'Content-Type': 'application/json', 'Accept': 'application/xml'},
     )
-    new_id = todo_from_xml(create_response.text)['id']
-    try:
-        assert_status_code(response=create_response, expected_status_code=201)
-        assert_content_type(response=create_response, expected_content_type='application/xml')
-        assert_todo_item_xml(create_response.text)
-        assert_todo_item_matches_xml(
-            item=create_response.text,
-            expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
-        )
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=create_response, expected_content_type='application/xml')
+    assert_todo_item_xml(create_response.text)
+    assert_todo_item_matches_xml(
+        item=create_response.text,
+        expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
+    )
 
 
 @pytest.mark.positive
@@ -1036,30 +953,25 @@ def test_099_max_todos(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(36)
-def test_100_put_no_id_body(api_client):
+def test_100_put_no_id_body(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=post_body)
-    post_payload = response.json()
+    response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=post_body)
 
-        put_body = {
-            'title': 'Updated test title',
-            'doneStatus': True,
-            'description': 'Updated test description',
-        }
-        put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
-        put_payload = put_response.json()
-        assert_status_code(response=put_response, expected_status_code=200)
-        assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=put_body)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    put_body = {
+        'title': 'Updated test title',
+        'doneStatus': True,
+        'description': 'Updated test description',
+    }
+    put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
+    put_payload = put_response.json()
+    assert_status_code(response=put_response, expected_status_code=200)
+    assert_content_type(response=put_response, expected_content_type='application/json')
+    assert_todo_item(put_payload)
+    assert_todo_item_matches(item=put_payload, expected=put_body)
 
 
 @pytest.mark.positive
@@ -1090,19 +1002,12 @@ def test_102_get_todos_application_xml_json(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(64)
-def test_103_create_todo_application_json(api_client):
+def test_103_create_todo_application_json(todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    response = api_client.post(
-        TODOS_PATH,
+    response, post_payload = todo_factory(
         headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
         json=post_body,
     )
-    post_payload = response.json()
-    new_id = post_payload['id']
-    try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
-    finally:
-        api_client.delete(f'{TODOS_PATH}/{new_id}')
+    assert_content_type(response=response, expected_content_type='application/json')
+    assert_todo_item(post_payload)
+    assert_todo_item_matches(item=post_payload, expected=post_body)

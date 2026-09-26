@@ -8,6 +8,7 @@ CHALLENGES_PATH = '/api/challenges'
 TODOS_PATH = '/api/todos'
 HEARTBEAT_PATH = '/api/heartbeat'
 SECRET_PATH = '/api/secret'
+BASIC_AUTHORIZATION = 'Basic YWRtaW46cGFzc3dvcmQ='
 
 
 class ApiError(RuntimeError):

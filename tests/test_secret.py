@@ -8,7 +8,7 @@ from api_challenges.assertions import (
     assert_status_code,
     assert_valid_guid,
 )
-from api_challenges.clients import SECRET_PATH, ApiError
+from api_challenges.clients import BASIC_AUTHORIZATION, SECRET_PATH, ApiError
 
 
 @pytest.mark.negative
@@ -32,7 +32,7 @@ def test_088_incorrect_user_password(api_client):
 def test_089_correct_user_password(api_client):
     response = api_client.get(
         f'{SECRET_PATH}/token',
-        headers={'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ=', 'Accept': '*/*'},
+        headers={'Authorization': BASIC_AUTHORIZATION, 'Accept': '*/*'},
     )
     token = response.json()['token']
     assert_status_code(response=response, expected_status_code=200)
@@ -64,15 +64,8 @@ def test_091_no_auth_token(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(92)
-def test_092_valid_auth_token(api_client):
-    get_token_response = api_client.get(
-        f'{SECRET_PATH}/token',
-        headers={'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ=', 'Accept': '*/*'},
-    )
-    x_auth_token = get_token_response.json()['token']
-    assert_status_code(response=get_token_response, expected_status_code=200)
-    assert_content_type(response=get_token_response, expected_content_type='application/json')
-    assert_valid_guid(x_auth_token)
+def test_092_valid_auth_token(api_client, auth_token):
+    _, x_auth_token = auth_token
 
     response = api_client.get(
         f'{SECRET_PATH}/note', headers={'X-AUTH-TOKEN': x_auth_token, 'Accept': 'application/json'}
@@ -84,15 +77,8 @@ def test_092_valid_auth_token(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(93)
-def test_093_create_note(api_client):
-    get_token_response = api_client.get(
-        f'{SECRET_PATH}/token',
-        headers={'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ=', 'Accept': '*/*'},
-    )
-    x_auth_token = get_token_response.json()['token']
-    assert_status_code(response=get_token_response, expected_status_code=200)
-    assert_content_type(response=get_token_response, expected_content_type='application/json')
-    assert_valid_guid(x_auth_token)
+def test_093_create_note(api_client, auth_token):
+    _, x_auth_token = auth_token
 
     body = {'note': 'Test note'}
     response = api_client.post(
@@ -146,15 +132,8 @@ def test_095_create_note_wrong_auth_token(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(96)
-def test_096_valid_bearer_token(api_client):
-    get_token_response = api_client.get(
-        f'{SECRET_PATH}/token',
-        headers={'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ=', 'Accept': '*/*'},
-    )
-    x_auth_token = get_token_response.json()['token']
-    assert_status_code(response=get_token_response, expected_status_code=200)
-    assert_content_type(response=get_token_response, expected_content_type='application/json')
-    assert_valid_guid(x_auth_token)
+def test_096_valid_bearer_token(api_client, auth_token):
+    _, x_auth_token = auth_token
 
     response = api_client.get(
         f'{SECRET_PATH}/note',
@@ -167,15 +146,8 @@ def test_096_valid_bearer_token(api_client):
 @pytest.mark.positive
 @pytest.mark.regression
 @pytest.mark.challenge(97)
-def test_097_create_note_bearer(api_client):
-    get_token_response = api_client.get(
-        f'{SECRET_PATH}/token',
-        headers={'Authorization': 'Basic YWRtaW46cGFzc3dvcmQ=', 'Accept': '*/*'},
-    )
-    x_auth_token = get_token_response.json()['token']
-    assert_status_code(response=get_token_response, expected_status_code=200)
-    assert_content_type(response=get_token_response, expected_content_type='application/json')
-    assert_valid_guid(x_auth_token)
+def test_097_create_note_bearer(api_client, auth_token):
+    _, x_auth_token = auth_token
 
     body = {'note': 'Test note bearer'}
     response = api_client.post(
