@@ -1,5 +1,7 @@
+import json
 from typing import Any
 
+import allure
 import httpx
 
 CHALLENGER_HEADER = 'X-CHALLENGER'
@@ -9,6 +11,55 @@ TODOS_PATH = '/api/todos'
 HEARTBEAT_PATH = '/api/heartbeat'
 SECRET_PATH = '/api/secret'
 BASIC_AUTHORIZATION = 'Basic YWRtaW46cGFzc3dvcmQ='
+_MASKED_HEADERS = {'authorization', 'x-auth-token'}
+_MAX_BODY_CHARS = 50 * 1024
+
+
+def _mask_secret_value(key: str, value: str) -> str:
+    return '***' if key.lower() in _MASKED_HEADERS and value else value
+
+
+def _mask_token_in_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            k: ('***' if k.lower() == 'token' and v else _mask_token_in_payload(v))
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_mask_token_in_payload(item) for item in value]
+    return value
+
+
+def _format_body(body: bytes, content_type: str) -> str:
+    text = body.decode('utf-8', errors='replace')
+    if 'json' in content_type.lower():
+        try:
+            payload = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        else:
+            text = json.dumps(_mask_token_in_payload(payload), indent=2, ensure_ascii=False)
+    if len(text) > _MAX_BODY_CHARS:
+        text = text[:_MAX_BODY_CHARS] + f'\n…[truncated {len(text) - _MAX_BODY_CHARS} bytes]'
+    return text
+
+
+def _attach_request(request: httpx.Request, method: str, path: str) -> None:
+    headers = '\n'.join(f'{k}: {_mask_secret_value(k, v)}' for k, v in request.headers.items())
+    body = _format_body(request.content, request.headers.get('content-type', ''))
+    text = f'{method} {request.url}\n\n{headers}\n\n{body}'
+    allure.attach(
+        text, name=f'Request: {method} {path}', attachment_type=allure.attachment_type.TEXT
+    )
+
+
+def _attach_response(response: httpx.Response) -> None:
+    headers = '\n'.join(f'{k}: {_mask_secret_value(k, v)}' for k, v in response.headers.items())
+    body = _format_body(response.content, response.headers.get('content-type', ''))
+    text = f'{response.status_code}\n\n{headers}\n\n{body}'
+    allure.attach(
+        text, name=f'Response: {response.status_code}', attachment_type=allure.attachment_type.TEXT
+    )
 
 
 class ApiError(RuntimeError):
@@ -36,6 +87,9 @@ class BaseClient:
         headers = dict(self._headers)
         headers.update(kwargs.pop('headers', None) or {})
         response = self._client.request(method, path, headers=headers, **kwargs)
+        with allure.step(f'{method} {path}'):
+            _attach_request(response.request, method, path)
+            _attach_response(response)
         value = response.headers.get(CHALLENGER_HEADER)
         if value:
             self._headers[CHALLENGER_HEADER] = value
