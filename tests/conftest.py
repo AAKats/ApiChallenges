@@ -11,22 +11,20 @@ from api_challenges.config import Settings, get_settings
 def settings() -> Settings:
     return get_settings()
 
+
 @pytest.fixture(scope='session')
 def api_client(settings) -> Iterator[BaseClient]:
     restore_guid = os.environ.get('API_CHALLENGES_RESTORE_GUID')
-    headers = ({CHALLENGER_HEADER: restore_guid} if restore_guid else None)
+    headers = {CHALLENGER_HEADER: restore_guid} if restore_guid else None
     client = BaseClient(
-        base_url=settings.api_base_url,
-        timeout=settings.api_timeout_seconds,
-        headers=headers
+        base_url=settings.api_base_url, timeout=settings.api_timeout_seconds, headers=headers
     )
     client.create_challenger()
-    print(f'X-CHALLENGER: {client.challenger}')
     yield client
     client.close()
 
+
 def pytest_collection_modifyitems(
-    config: pytest.Config,
     items: list[pytest.Item],
 ) -> None:
     def _challenge_number(item: pytest.Item) -> float:

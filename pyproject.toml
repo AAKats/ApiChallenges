@@ -13,7 +13,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     'pytest>=8.3',
-    'ruff>=0.6',
+    'ruff>=0.16,<0.17',
 ]
 
 [build-system]
@@ -29,7 +29,49 @@ target-version = 'py312'
 src = ['src', 'tests']
 
 [tool.ruff.lint]
-select = ['E', 'F', 'I', 'UP']
+select = [
+    'F',          # pyflakes: неиспользуемые импорты/переменные, неопределённые имена
+    'E', 'W',     # pycodestyle
+    'I',          # isort
+    'N',          # pep8-naming
+    'UP',         # pyupgrade под target-version
+    'B',          # bugbear: типичные баги
+    'C4',         # comprehensions
+    'SIM',        # упрощение условий
+    'RET',        # логика return
+    'PT',         # flake8-pytest-style
+    'PTH',        # pathlib вместо os.path
+    'DTZ',        # datetime без таймзоны
+    'T20',        # забытые print()
+    'ARG',        # неиспользуемые аргументы
+    'ERA',        # закомментированный код
+    'S',          # bandit: безопасность
+    'PLE', 'PLW', # pylint: ошибки и предупреждения
+    'RUF',        # правила Ruff, включая RUF100 (лишние noqa)
+]
+ignore = [
+    'E501',       # длину строк контролирует ruff format
+]
+
+[tool.ruff.lint.per-file-ignores]
+'tests/**/*.py' = [
+    'S101',         # assert в тестах — норма
+    'S105', 'S106', # демо-учётные данные API Challenges
+]
+'src/api_challenges/assertions.py' = ['S101']        # модуль assertion-хелперов
+'src/api_challenges/utils.py' = ['S101', 'S314']     # валидация экспорта; XML от тестового стенда
+'src/api_challenges/clients.py' = ['S105']           # SECRET_PATH — URL эндпоинта, не секрет
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = 'tuple'
+
+[tool.ruff.lint.isort]
+known-first-party = ['api_challenges']
+
+[tool.ruff.format]
+quote-style = 'preserve'   # сохраняем одинарные кавычки, включая вложенные в f-строки
 
 [tool.pytest.ini_options]
 testpaths = ['tests']

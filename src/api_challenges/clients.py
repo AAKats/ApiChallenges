@@ -9,6 +9,7 @@ TODOS_PATH = '/api/todos'
 HEARTBEAT_PATH = '/api/heartbeat'
 SECRET_PATH = '/api/secret'
 
+
 class ApiError(RuntimeError):
     def __init__(self, method: str, url: str, status_code: int, body: str) -> None:
         self.method = method
@@ -17,27 +18,19 @@ class ApiError(RuntimeError):
         self.body = body
         super().__init__(f'{method} {url} -> {status_code}')
 
+
 class BaseClient:
     def __init__(
-            self,
-            base_url: str,
-            *,
-            timeout: float = 15.0,
-            headers: dict[str, str] | None = None
+        self, base_url: str, *, timeout: float = 15.0, headers: dict[str, str] | None = None
     ) -> None:
-        default_headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
+        default_headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
         default_headers.update(headers or {})
         base_url = base_url.rstrip('/')
         self._headers = default_headers
         self._client = httpx.Client(
-            base_url=base_url,
-            headers=self._headers,
-            timeout=timeout,
-            follow_redirects=True
+            base_url=base_url, headers=self._headers, timeout=timeout, follow_redirects=True
         )
+
     def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         headers = dict(self._headers)
         headers.update(kwargs.pop('headers', None) or {})
@@ -53,6 +46,7 @@ class BaseClient:
                 body=response.text,
             )
         return response
+
     def get(self, path: str, **kwargs: Any) -> httpx.Response:
         return self.request('GET', path, **kwargs)
 
@@ -84,9 +78,7 @@ class BaseClient:
         self.post(CHALLENGER_PATH)
         guid = self.challenger
         if not guid:
-            raise RuntimeError(
-                f'POST {CHALLENGER_PATH} did not return {CHALLENGER_HEADER} header'
-            )
+            raise RuntimeError(f'POST {CHALLENGER_PATH} did not return {CHALLENGER_HEADER} header')
         return guid
 
     @property
@@ -98,7 +90,3 @@ class BaseClient:
 
     def close(self) -> None:
         self._client.close()
-
-
-
-
