@@ -36,7 +36,7 @@ def test_017_done_status_false(api_client):
 @pytest.mark.challenge(7)
 def test_018_done_status_true(api_client, todo_factory):
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    post_response, post_payload = todo_factory(json=body)
+    post_response, post_payload = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=post_response, expected_content_type='application/json')
         assert_todo_item(post_payload)
@@ -125,7 +125,7 @@ def test_021_id_equal_filter_id(api_client, _case_info, id):
 def test_022_description_regexp(api_client, _case_info, description, regexp, todo_factory):
     test_regexp = re.compile(regexp)
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
-    post_response, post_payload = todo_factory(json=body)
+    post_response, post_payload = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=post_response, expected_content_type='application/json')
         assert_todo_item(post_payload)
@@ -159,7 +159,7 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
 )
 def test_023_description_wildcard(api_client, _case_info, description, wildcard, todo_factory):
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
-    post_response, post_payload = todo_factory(json=body)
+    post_response, post_payload = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=post_response, expected_content_type='application/json')
         assert_todo_item(post_payload)
@@ -186,7 +186,7 @@ def test_023_description_wildcard(api_client, _case_info, description, wildcard,
 @pytest.mark.challenge(13)
 def test_024_sort_by_title_asc(api_client, todo_factory):
     body = {'title': 'Aaa sort', 'doneStatus': False, 'description': 'sort test'}
-    _, post_payload = todo_factory(json=body)
+    _, post_payload = todo_factory(json=body, ensure_visible=True)
     new_id = post_payload['id']
     with allure.step('Запросить todos: сортировка по title'):
         response = api_client.get(f'{TODOS_PATH}?_sortBy=title')

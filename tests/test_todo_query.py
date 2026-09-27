@@ -23,7 +23,7 @@ def test_046_query_done_status(api_client, _case_info, done_status, todo_factory
         'doneStatus': done_status,
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body)
+    create_response, create_payload = todo_factory(json=create_body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
         assert_todo_item(create_payload)
@@ -62,7 +62,7 @@ def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, tod
         'doneStatus': done_status == 'true',
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body)
+    create_response, create_payload = todo_factory(json=create_body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
         assert_todo_item(create_payload)
@@ -102,7 +102,7 @@ def test_048_query_done_status_json(api_client, _case_info, done_status, todo_fa
         'doneStatus': done_status,
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body)
+    create_response, create_payload = todo_factory(json=create_body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
         assert_todo_item(create_payload)

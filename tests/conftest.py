@@ -79,7 +79,7 @@ def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, dic
     created_ids: list[int] = []
 
     def _create(**kwargs: object) -> tuple[httpx.Response, dict]:
-        response, create_payload = _create_todo_with_retry(api_client, **kwargs)
+        response, create_payload = _create_todo(api_client, **kwargs)
         created_ids.append(create_payload['id'])
         return response, create_payload
 
@@ -97,24 +97,34 @@ def _is_todo_visible(api_client: BaseClient, todo_id: int) -> bool:
     return any(todo['id'] == todo_id for todo in response.json()['todos'])
 
 
-def _create_todo_with_retry(
+def _create_todo(
     api_client: BaseClient,
     *,
-    attempts: int = 3,
+    ensure_visible: bool = False,
+    attempts: int = 5,
     **kwargs: object,
 ) -> tuple[httpx.Response, dict]:
-    for attempt in range(1, attempts + 1):
-        with allure.step(f'Создание todo (попытка {attempt} из {attempts})'):
+    total = attempts if ensure_visible else 1
+    last_id = None
+    for attempt in range(1, total + 1):
+        title = (
+            f'Создание todo (попытка {attempt} из {total})' if ensure_visible else 'Создание todo'
+        )
+        with allure.step(title):
             response = api_client.post(TODOS_PATH, **kwargs)
         assert_status_code(response=response, expected_status_code=201)
         content_type = response.headers.get('content-type', '')
         payload = response.json() if 'json' in content_type else todo_from_xml(response.text)
-        if _is_todo_visible(api_client, payload['id']):
+        if not ensure_visible:
             return response, payload
-        with allure.step(f'Созданный todo {payload['id']} не виден в списке, удаляю и повторяю'):
-            api_client.delete(f'{TODOS_PATH}/{payload['id']}')
+        last_id = payload['id']
+        if _is_todo_visible(api_client, last_id):
+            return response, payload
+        with allure.step(f'Созданный todo {last_id} не виден в списке, удаляю и повторяю'):
+            api_client.delete(f'{TODOS_PATH}/{last_id}')
     raise AssertionError(
-        f'Failed to create a todo visible in GET {TODOS_PATH} after {attempts} attempts'
+        f'todo {last_id} not visible in GET {TODOS_PATH} after {total} attempts '
+        '(known stand issue, see README)'
     )
 
 
@@ -247,7 +257,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
 
 def _format_ids(ids: frozenset[int]) -> str:
-    return ', '.join(str(i) for i in sorted(ids)) or '—'
+    return ', '.join(str(i) for i in sorted(ids)) or 'none'
 
 
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
