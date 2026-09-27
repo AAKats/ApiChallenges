@@ -1,5 +1,6 @@
 import json
 
+import allure
 import pytest
 
 from api_challenges.assertions import (
@@ -49,7 +50,8 @@ def test_004_get_todo_not_plural(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(5)
 def test_005_get_todo_by_id(api_client):
-    response = api_client.get(TODOS_PATH)
+    with allure.step('Получить список todos'):
+        response = api_client.get(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
     payload = response.json()
@@ -57,7 +59,8 @@ def test_005_get_todo_by_id(api_client):
     assert todos, 'No todos in the session'
     assert_todo_item(todos[0])
     todo_id = todos[0]['id']
-    response_with_id = api_client.get(f'{TODOS_PATH}/{todo_id}')
+    with allure.step(f'Получить todo по id {todo_id}'):
+        response_with_id = api_client.get(f'{TODOS_PATH}/{todo_id}')
     assert_status_code(response=response_with_id, expected_status_code=200)
     assert_content_type(response=response_with_id, expected_content_type='application/json')
     found = response_with_id.json()['todos'][0]
@@ -122,18 +125,21 @@ def test_009_put_title_partial(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=post_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=post_body)
 
     put_body = {'title': 'test updated title'}
-    put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
+    with allure.step('Обновить todo (PUT)'):
+        put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
     put_payload = put_response.json()
     put_expected = {'title': put_body['title'], 'doneStatus': False, 'description': ''}
-    assert_status_code(response=put_response, expected_status_code=200)
-    assert_content_type(response=put_response, expected_content_type='application/json')
-    assert_todo_item(put_payload)
-    assert_todo_item_matches(item=put_payload, expected=put_expected)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=put_response, expected_status_code=200)
+        assert_content_type(response=put_response, expected_content_type='application/json')
+        assert_todo_item(put_payload)
+        assert_todo_item_matches(item=put_payload, expected=put_expected)
 
 
 @pytest.mark.positive
@@ -143,18 +149,21 @@ def test_010_patch_done_status(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=post_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=post_body)
 
     patch_body = {'doneStatus': True}
-    patch_response = api_client.patch(f'{TODOS_PATH}/{new_id}', json=patch_body)
+    with allure.step('Обновить todo (PATCH)'):
+        patch_response = api_client.patch(f'{TODOS_PATH}/{new_id}', json=patch_body)
     patch_payload = patch_response.json()
     patch_expected = {**post_payload, 'doneStatus': patch_body['doneStatus']}
-    assert_status_code(response=patch_response, expected_status_code=200)
-    assert_content_type(response=patch_response, expected_content_type='application/json')
-    assert_todo_item(patch_payload)
-    assert_todo_item_matches(item=patch_payload, expected=patch_expected)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=patch_response, expected_status_code=200)
+        assert_content_type(response=patch_response, expected_content_type='application/json')
+        assert_todo_item(patch_payload)
+        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -162,22 +171,25 @@ def test_010_patch_done_status(api_client, todo_factory):
 @pytest.mark.challenge(41)
 def test_011_delete_todo(api_client):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response = api_client.post(TODOS_PATH, json=post_body)
+    with allure.step('Создание todo'):
+        response = api_client.post(TODOS_PATH, json=post_body)
     post_payload = response.json()
     new_id = post_payload['id']
     try:
-        assert_status_code(response=response, expected_status_code=201)
-        assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+        with allure.step('Проверить создание todo'):
+            assert_status_code(response=response, expected_status_code=201)
+            assert_content_type(response=response, expected_content_type='application/json')
+            assert_todo_item(post_payload)
+            assert_todo_item_matches(item=post_payload, expected=post_body)
     except Exception:
         api_client.delete(f'{TODOS_PATH}/{new_id}')
         raise
 
-    delete_response = api_client.delete(f'{TODOS_PATH}/{new_id}')
+    with allure.step('Удалить todo'):
+        delete_response = api_client.delete(f'{TODOS_PATH}/{new_id}')
     assert_status_code(response=delete_response, expected_status_code=204)
 
-    with pytest.raises(ApiError) as exc:
+    with allure.step('Проверить 404 после удаления'), pytest.raises(ApiError) as exc:
         api_client.get(f'{TODOS_PATH}/{new_id}')
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
     assert_error_message(
@@ -354,16 +366,19 @@ def test_039_update_via_post(api_client, todo_factory):
     }
     create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
 
-    response = api_client.post(f'{TODOS_PATH}/{new_id}', json=updated_body)
+    with allure.step('Обновить todo (POST)'):
+        response = api_client.post(f'{TODOS_PATH}/{new_id}', json=updated_body)
     post_payload = response.json()
-    assert_status_code(response=response, expected_status_code=200)
-    assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=updated_body)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=response, expected_status_code=200)
+        assert_content_type(response=response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=updated_body)
 
 
 @pytest.mark.negative
@@ -391,9 +406,10 @@ def test_041_update_via_put_full(api_client, todo_factory):
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
     create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
     updated_body = {
         'id': new_id,
         'title': 'full update widget todo',
@@ -401,12 +417,14 @@ def test_041_update_via_put_full(api_client, todo_factory):
         'description': 'created from the solution page',
     }
 
-    put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=updated_body)
+    with allure.step('Обновить todo (PUT)'):
+        put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=updated_body)
     put_payload = put_response.json()
-    assert_status_code(response=put_response, expected_status_code=200)
-    assert_content_type(response=put_response, expected_content_type='application/json')
-    assert_todo_item(put_payload)
-    assert_todo_item_matches(item=put_payload, expected=updated_body)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=put_response, expected_status_code=200)
+        assert_content_type(response=put_response, expected_content_type='application/json')
+        assert_todo_item(put_payload)
+        assert_todo_item_matches(item=put_payload, expected=updated_body)
 
 
 @pytest.mark.positive
@@ -416,9 +434,10 @@ def test_042_update_via_put_body_id(api_client, todo_factory):
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
     create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
     updated_body = {
         'id': new_id,
         'title': 'full update widget todo',
@@ -426,12 +445,14 @@ def test_042_update_via_put_body_id(api_client, todo_factory):
         'description': 'created from the solution page',
     }
 
-    put_response = api_client.put(TODOS_PATH, json=updated_body)
+    with allure.step('Обновить todo (PUT)'):
+        put_response = api_client.put(TODOS_PATH, json=updated_body)
     put_payload = put_response.json()
-    assert_status_code(response=put_response, expected_status_code=200)
-    assert_content_type(response=put_response, expected_content_type='application/json')
-    assert_todo_item(put_payload)
-    assert_todo_item_matches(item=put_payload, expected=updated_body)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=put_response, expected_status_code=200)
+        assert_content_type(response=put_response, expected_content_type='application/json')
+        assert_todo_item(put_payload)
+        assert_todo_item_matches(item=put_payload, expected=updated_body)
 
 
 @pytest.mark.negative
@@ -489,22 +510,25 @@ def test_049_merge_patch(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=post_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=post_body)
 
     patch_body = {'description': 'patched with merge patch'}
-    patch_response = api_client.patch(
-        f'{TODOS_PATH}/{new_id}',
-        headers={'Content-Type': 'application/merge-patch+json'},
-        json=patch_body,
-    )
+    with allure.step('Обновить todo (merge patch)'):
+        patch_response = api_client.patch(
+            f'{TODOS_PATH}/{new_id}',
+            headers={'Content-Type': 'application/merge-patch+json'},
+            json=patch_body,
+        )
     patch_payload = patch_response.json()
     patch_expected = {**post_payload, 'description': 'patched with merge patch'}
-    assert_status_code(response=patch_response, expected_status_code=200)
-    assert_content_type(response=patch_response, expected_content_type='application/json')
-    assert_todo_item(patch_payload)
-    assert_todo_item_matches(item=patch_payload, expected=patch_expected)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=patch_response, expected_status_code=200)
+        assert_content_type(response=patch_response, expected_content_type='application/json')
+        assert_todo_item(patch_payload)
+        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -514,22 +538,25 @@ def test_050_json_patch(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=post_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=post_body)
 
     patch_body = [{'op': 'replace', 'path': '/title', 'value': 'patched with json patch'}]
-    patch_response = api_client.patch(
-        f'{TODOS_PATH}/{new_id}',
-        headers={'Content-Type': 'application/json-patch+json'},
-        json=patch_body,
-    )
+    with allure.step('Обновить todo (json patch)'):
+        patch_response = api_client.patch(
+            f'{TODOS_PATH}/{new_id}',
+            headers={'Content-Type': 'application/json-patch+json'},
+            json=patch_body,
+        )
     patch_payload = patch_response.json()
     patch_expected = {**post_payload, 'title': 'patched with json patch'}
-    assert_status_code(response=patch_response, expected_status_code=200)
-    assert_content_type(response=patch_response, expected_content_type='application/json')
-    assert_todo_item(patch_payload)
-    assert_todo_item_matches(item=patch_payload, expected=patch_expected)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=patch_response, expected_status_code=200)
+        assert_content_type(response=patch_response, expected_content_type='application/json')
+        assert_todo_item(patch_payload)
+        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -607,13 +634,15 @@ def test_056_get_todo_calendar(api_client, _case_info, done_status, expected_sta
     }
     create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
 
-    calendar_response = api_client.get(
-        f'{TODOS_PATH}/{new_id}', headers={'Accept': 'text/calendar'}
-    )
+    with allure.step(f'Получить todo {new_id} как calendar'):
+        calendar_response = api_client.get(
+            f'{TODOS_PATH}/{new_id}', headers={'Accept': 'text/calendar'}
+        )
     assert_status_code(response=calendar_response, expected_status_code=200)
     assert_content_type(response=calendar_response, expected_content_type='text/calendar')
     lines = calendar_response.text.split('\r\n')
@@ -868,43 +897,49 @@ def test_079_json_to_xml(todo_factory):
 def test_098_delete_all_todos(api_client):
     delete_all_rounds = 3
     deleted_todos = []
-    get_response = api_client.get(TODOS_PATH)
+    with allure.step('Получить todos'):
+        get_response = api_client.get(TODOS_PATH)
 
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
     try:
-        for _ in range(delete_all_rounds):
-            round_response = api_client.get(TODOS_PATH)
-            assert_status_code(response=round_response, expected_status_code=200)
-            assert_content_type(response=round_response, expected_content_type='application/json')
-            round_todos = round_response.json()['todos']
-            if not round_todos:
-                break
-            for todo in round_todos:
-                delete_response = api_client.delete(f'{TODOS_PATH}/{todo['id']}')
-                deleted_todos.append(todo)
-                assert_status_code(response=delete_response, expected_status_code=204)
-        check_delete_response = api_client.get(TODOS_PATH)
-        assert_status_code(response=check_delete_response, expected_status_code=200)
-        assert_content_type(
-            response=check_delete_response, expected_content_type='application/json'
-        )
-        check_delete_payload = check_delete_response.json()
-        check_delete_todos = check_delete_payload['todos']
-        assert len(check_delete_todos) == 0, (
-            f'Todos list is not empty, neet to delete {len(check_delete_todos)} todo'
-        )
-    finally:
-        for todo in deleted_todos:
-            restore_response = api_client.post(
-                TODOS_PATH,
-                json={
-                    'title': todo['title'],
-                    'doneStatus': todo['doneStatus'],
-                    'description': todo['description'],
-                },
+        with allure.step('Удалять todos по кругам пока список не опустеет'):
+            for _ in range(delete_all_rounds):
+                round_response = api_client.get(TODOS_PATH)
+                assert_status_code(response=round_response, expected_status_code=200)
+                assert_content_type(
+                    response=round_response, expected_content_type='application/json'
+                )
+                round_todos = round_response.json()['todos']
+                if not round_todos:
+                    break
+                for todo in round_todos:
+                    delete_response = api_client.delete(f'{TODOS_PATH}/{todo['id']}')
+                    deleted_todos.append(todo)
+                    assert_status_code(response=delete_response, expected_status_code=204)
+        with allure.step('Проверить, что список пуст'):
+            check_delete_response = api_client.get(TODOS_PATH)
+            assert_status_code(response=check_delete_response, expected_status_code=200)
+            assert_content_type(
+                response=check_delete_response, expected_content_type='application/json'
             )
-            assert_status_code(response=restore_response, expected_status_code=201)
+            check_delete_payload = check_delete_response.json()
+            check_delete_todos = check_delete_payload['todos']
+            assert len(check_delete_todos) == 0, (
+                f'Todos list is not empty, neet to delete {len(check_delete_todos)} todo'
+            )
+    finally:
+        with allure.step('Восстановить удалённые todos'):
+            for todo in deleted_todos:
+                restore_response = api_client.post(
+                    TODOS_PATH,
+                    json={
+                        'title': todo['title'],
+                        'doneStatus': todo['doneStatus'],
+                        'description': todo['description'],
+                    },
+                )
+                assert_status_code(response=restore_response, expected_status_code=201)
 
 
 @pytest.mark.positive
@@ -913,41 +948,47 @@ def test_098_delete_all_todos(api_client):
 def test_099_max_todos(api_client):
     max_todos_count = 20
     new_todo_ids = []
-    get_response = api_client.get(TODOS_PATH)
+    with allure.step('Получить todos'):
+        get_response = api_client.get(TODOS_PATH)
 
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
     payload = get_response.json()
     todos = payload['todos']
     try:
-        for i in range(max_todos_count - len(todos) + 1):
-            new_todo = {
-                'title': f'Test todo #{len(todos) + i + 1}',
-                'doneStatus': True,
-                'description': f'Test todo #{len(todos) + i + 1}',
-            }
-            try:
-                create_response = api_client.post(TODOS_PATH, json=new_todo)
-            except ApiError as exc:
-                assert_error_status_code(
-                    received_status_code=exc.status_code, expected_status_code=409
+        with allure.step('Создавать todos до достижения лимита 20'):
+            for i in range(max_todos_count - len(todos) + 1):
+                new_todo = {
+                    'title': f'Test todo #{len(todos) + i + 1}',
+                    'doneStatus': True,
+                    'description': f'Test todo #{len(todos) + i + 1}',
+                }
+                try:
+                    create_response = api_client.post(TODOS_PATH, json=new_todo)
+                except ApiError as exc:
+                    with allure.step('Проверить 409 при превышении лимита'):
+                        assert_error_status_code(
+                            received_status_code=exc.status_code, expected_status_code=409
+                        )
+                        assert_error_message(
+                            json.loads(exc.body),
+                            error_message='ERROR: Cannot add instance, maximum limit of 20 reached',
+                        )
+                    break
+                create_payload = create_response.json()
+                assert_status_code(response=create_response, expected_status_code=201)
+                assert_content_type(
+                    response=create_response, expected_content_type='application/json'
                 )
-                assert_error_message(
-                    json.loads(exc.body),
-                    error_message='ERROR: Cannot add instance, maximum limit of 20 reached',
-                )
-                break
-            create_payload = create_response.json()
-            assert_status_code(response=create_response, expected_status_code=201)
-            assert_content_type(response=create_response, expected_content_type='application/json')
-            assert_todo_item_matches(item=create_payload, expected=new_todo)
-            new_todo_ids.append(create_payload['id'])
-        else:
-            pytest.fail('Expected POST /api/todos to return 409 when limit reached')
+                assert_todo_item_matches(item=create_payload, expected=new_todo)
+                new_todo_ids.append(create_payload['id'])
+            else:
+                pytest.fail('Expected POST /api/todos to return 409 when limit reached')
     finally:
-        for todo_id in new_todo_ids:
-            delete_response = api_client.delete(f'{TODOS_PATH}/{todo_id}')
-            assert_status_code(response=delete_response, expected_status_code=204)
+        with allure.step('Удалить созданные todos'):
+            for todo_id in new_todo_ids:
+                delete_response = api_client.delete(f'{TODOS_PATH}/{todo_id}')
+                assert_status_code(response=delete_response, expected_status_code=204)
 
 
 @pytest.mark.positive
@@ -957,21 +998,24 @@ def test_100_put_no_id_body(api_client, todo_factory):
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
-    assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=post_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=post_body)
 
     put_body = {
         'title': 'Updated test title',
         'doneStatus': True,
         'description': 'Updated test description',
     }
-    put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
+    with allure.step('Обновить todo (PUT)'):
+        put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
     put_payload = put_response.json()
-    assert_status_code(response=put_response, expected_status_code=200)
-    assert_content_type(response=put_response, expected_content_type='application/json')
-    assert_todo_item(put_payload)
-    assert_todo_item_matches(item=put_payload, expected=put_body)
+    with allure.step('Проверить обновление todo'):
+        assert_status_code(response=put_response, expected_status_code=200)
+        assert_content_type(response=put_response, expected_content_type='application/json')
+        assert_todo_item(put_payload)
+        assert_todo_item_matches(item=put_payload, expected=put_body)
 
 
 @pytest.mark.positive

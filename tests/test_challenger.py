@@ -1,6 +1,7 @@
 import json
 import uuid
 
+import allure
 import pytest
 
 from api_challenges.assertions import (
@@ -57,20 +58,22 @@ def test_072_get_progress(api_client):
 @pytest.mark.challenge(73)
 def test_073_restore_challenger_progress(api_client):
     guid = api_client.challenger
-    get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
-    )
+    with allure.step(f'Получить прогресс challenger {guid}'):
+        get_response = api_client.get(
+            f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
+        )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
     payload = get_response.json()
     assert payload['xChallenger'] == guid, (
         f'Incorrect challenger guid: {payload['xChallenger']}, should be: {guid}'
     )
-    put_response = api_client.put(
-        f'{CHALLENGER_PATH}/{guid}',
-        headers={'Accept': 'application/json'},
-        json=payload,
-    )
+    with allure.step(f'Восстановить прогресс challenger {guid}'):
+        put_response = api_client.put(
+            f'{CHALLENGER_PATH}/{guid}',
+            headers={'Accept': 'application/json'},
+            json=payload,
+        )
     assert_status_code(response=put_response, expected_status_code=200)
     assert_content_type(response=put_response, expected_content_type='application/json')
     payload = put_response.json()
@@ -85,16 +88,17 @@ def test_073_restore_challenger_progress(api_client):
 def test_074_mismatch_guid(api_client):
     guid = api_client.challenger
     new_guid = str(uuid.uuid4())
-    get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
-    )
+    with allure.step(f'Получить прогресс challenger {guid}'):
+        get_response = api_client.get(
+            f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
+        )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
     payload = get_response.json()
     assert payload['xChallenger'] == guid, (
         f'Incorrect challenger new_guid: {payload['xChallenger']}, should be: {guid}'
     )
-    with pytest.raises(ApiError) as exc:
+    with allure.step('PUT: несовпадающий GUID'), pytest.raises(ApiError) as exc:
         api_client.put(
             f'{CHALLENGER_PATH}/{new_guid}',
             headers={'Accept': 'application/json', CHALLENGER_HEADER: guid},
@@ -112,9 +116,10 @@ def test_074_mismatch_guid(api_client):
 def test_075_create_guid(api_client):
     guid = api_client.challenger
     new_guid = str(uuid.uuid4())
-    get_response = api_client.get(
-        f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
-    )
+    with allure.step(f'Получить прогресс challenger {guid}'):
+        get_response = api_client.get(
+            f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
+        )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
     get_payload = get_response.json()
@@ -124,15 +129,16 @@ def test_075_create_guid(api_client):
     create_payload = get_payload.copy()
     create_payload['xChallenger'] = new_guid
 
-    put_response = api_client.put(
-        f'{CHALLENGER_PATH}/{new_guid}',
-        headers={
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            CHALLENGER_HEADER: guid,
-        },
-        json=create_payload,
-    )
+    with allure.step(f'Создать challenger {new_guid}'):
+        put_response = api_client.put(
+            f'{CHALLENGER_PATH}/{new_guid}',
+            headers={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                CHALLENGER_HEADER: guid,
+            },
+            json=create_payload,
+        )
     assert_status_code(response=put_response, expected_status_code=201)
     api_client.use_challenger(guid)
     assert_content_type(response=put_response, expected_content_type='application/json')
@@ -160,10 +166,11 @@ def test_076_current_todos_database(api_client):
 @pytest.mark.challenge(77)
 def test_077_update_todos_database(api_client):
     guid = api_client.challenger
-    get_response = api_client.get(
-        f'{CHALLENGER_PATH}/database/{guid}',
-        headers={'Accept': 'application/json'},
-    )
+    with allure.step(f'Получить database challenger {guid}'):
+        get_response = api_client.get(
+            f'{CHALLENGER_PATH}/database/{guid}',
+            headers={'Accept': 'application/json'},
+        )
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='application/json')
     get_payload = get_response.json()
@@ -176,9 +183,10 @@ def test_077_update_todos_database(api_client):
         'description': 'New todo description',
     }
     get_payload['todos'].append(new_todo)
-    put_response = api_client.put(
-        f'{CHALLENGER_PATH}/database/{guid}',
-        headers={'Accept': 'application/json'},
-        json=get_payload,
-    )
+    with allure.step(f'Обновить database challenger {guid}'):
+        put_response = api_client.put(
+            f'{CHALLENGER_PATH}/database/{guid}',
+            headers={'Accept': 'application/json'},
+            json=get_payload,
+        )
     assert_status_code(response=put_response, expected_status_code=204)

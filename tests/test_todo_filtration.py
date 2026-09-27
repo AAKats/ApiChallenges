@@ -2,6 +2,7 @@ import fnmatch
 import json
 import re
 
+import allure
 import pytest
 
 from api_challenges.assertions import (
@@ -36,11 +37,13 @@ def test_017_done_status_false(api_client):
 def test_018_done_status_true(api_client, todo_factory):
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     post_response, post_payload = todo_factory(json=body)
-    assert_content_type(response=post_response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=post_response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=body)
 
-    get_response = api_client.get(f'{TODOS_PATH}?doneStatus=true')
+    with allure.step('Запросить todos: фильтр doneStatus=true'):
+        get_response = api_client.get(f'{TODOS_PATH}?doneStatus=true')
     assert_status_code(response=get_response, expected_status_code=200)
     get_payload = get_response.json()
     todos = get_payload['todos']
@@ -123,16 +126,18 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
     test_regexp = re.compile(regexp)
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
     post_response, post_payload = todo_factory(json=body)
-    assert_content_type(response=post_response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=post_response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=body)
 
-    get_response = api_client.get(f'{TODOS_PATH}?description~={regexp}')
+    with allure.step('Запросить todos: фильтр description regexp'):
+        get_response = api_client.get(f'{TODOS_PATH}?description~={regexp}')
     assert_status_code(response=get_response, expected_status_code=200)
     get_payload = get_response.json()
     todos = get_payload['todos']
     assert_content_type(response=get_response, expected_content_type='application/json')
-    assert post_payload['description'] in {t['description'] for t in todos}, (
+    assert post_payload['id'] in {t['id'] for t in todos}, (
         f'Filter did not include the created description = {description} todo'
     )
     for todo in todos:
@@ -155,16 +160,18 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
 def test_023_description_wildcard(api_client, _case_info, description, wildcard, todo_factory):
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
     post_response, post_payload = todo_factory(json=body)
-    assert_content_type(response=post_response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=post_response, expected_content_type='application/json')
+        assert_todo_item(post_payload)
+        assert_todo_item_matches(item=post_payload, expected=body)
 
-    get_response = api_client.get(f'{TODOS_PATH}?description*={wildcard}')
+    with allure.step('Запросить todos: фильтр description wildcard'):
+        get_response = api_client.get(f'{TODOS_PATH}?description*={wildcard}')
     assert_status_code(response=get_response, expected_status_code=200)
     get_payload = get_response.json()
     todos = get_payload['todos']
     assert_content_type(response=get_response, expected_content_type='application/json')
-    assert post_payload['description'] in {t['description'] for t in todos}, (
+    assert post_payload['id'] in {t['id'] for t in todos}, (
         f'Filter did not include the created description = {description} todo'
     )
     for todo in todos:
@@ -181,7 +188,8 @@ def test_024_sort_by_title_asc(api_client, todo_factory):
     body = {'title': 'Aaa sort', 'doneStatus': False, 'description': 'sort test'}
     _, post_payload = todo_factory(json=body)
     new_id = post_payload['id']
-    response = api_client.get(f'{TODOS_PATH}?_sortBy=title')
+    with allure.step('Запросить todos: сортировка по title'):
+        response = api_client.get(f'{TODOS_PATH}?_sortBy=title')
     payload = response.json()
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
@@ -247,12 +255,14 @@ def test_028_limit_8(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(18)
 def test_029_limit_and_offset(api_client):
-    first_response = api_client.get(f'{TODOS_PATH}?_limit=5&_offset=0')
+    with allure.step('Получить первую страницу (limit=5, offset=0)'):
+        first_response = api_client.get(f'{TODOS_PATH}?_limit=5&_offset=0')
     assert_status_code(response=first_response, expected_status_code=200)
     first_todos = first_response.json()['todos']
     assert len(first_todos) == 5, f'Incorrect count of todos expected 5, got {len(first_todos)}'
 
-    second_response = api_client.get(f'{TODOS_PATH}?&_limit=5&_offset=5')
+    with allure.step('Получить вторую страницу (limit=5, offset=5)'):
+        second_response = api_client.get(f'{TODOS_PATH}?&_limit=5&_offset=5')
     assert_status_code(response=second_response, expected_status_code=200)
     second_todos = second_response.json()['todos']
     assert len(second_todos) == 5, f'Incorrect count of todos expected 5, got {len(second_todos)}'
@@ -277,13 +287,15 @@ def test_030_limit_too_high(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(20)
 def test_031_sort_and_limit_and_offset(api_client):
-    first_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=0')
+    with allure.step('Получить первую страницу (sort=-id, limit=5, offset=0)'):
+        first_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=0')
     assert_status_code(response=first_response, expected_status_code=200)
     first_todos = first_response.json()['todos']
     assert len(first_todos) == 5, f'Incorrect count of todos expected 5, got {len(first_todos)}'
     assert_sorted(first_todos, '-id')
 
-    second_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=5')
+    with allure.step('Получить вторую страницу (sort=-id, limit=5, offset=5)'):
+        second_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=5')
     assert_status_code(response=second_response, expected_status_code=200)
     second_todos = second_response.json()['todos']
     assert len(second_todos) == 5, f'Incorrect count of todos expected 5, got {len(second_todos)}'
@@ -298,14 +310,16 @@ def test_031_sort_and_limit_and_offset(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(21)
 def test_032_filter_and_limit_and_offset(api_client):
-    first_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=3')
+    with allure.step('Получить первую страницу (doneStatus=false, limit=2, offset=3)'):
+        first_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=3')
     assert_status_code(response=first_response, expected_status_code=200)
     first_todos = first_response.json()['todos']
     assert len(first_todos) == 2, f'Incorrect count of todos expected 2, got {len(first_todos)}'
     for todo in first_todos:
         assert not todo['doneStatus']
 
-    second_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=1')
+    with allure.step('Получить вторую страницу (doneStatus=false, limit=2, offset=1)'):
+        second_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=1')
     assert_status_code(response=second_response, expected_status_code=200)
     second_todos = second_response.json()['todos']
     assert len(second_todos) == 2, f'Incorrect count of todos expected 2, got {len(second_todos)}'

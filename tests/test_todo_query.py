@@ -1,3 +1,4 @@
+import allure
 import pytest
 
 from api_challenges.assertions import (
@@ -17,21 +18,30 @@ from api_challenges.clients import TODOS_PATH
     [('Кейс 46.1 - doneStatus = true', True), ('Кейс 46.2 - doneStatus = false', False)],
 )
 def test_046_query_done_status(api_client, _case_info, done_status, todo_factory):
-    create_body = {'title': 'test title', 'doneStatus': True, 'description': 'test description'}
+    create_body = {
+        'title': 'test title',
+        'doneStatus': done_status,
+        'description': 'test description',
+    }
     create_response, create_payload = todo_factory(json=create_body)
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
 
-    response = api_client.query(
-        TODOS_PATH,
-        headers={'Content-Type': 'application/x-www-form-urlencoded'},
-        content=f'doneStatus={done_status}',
-    )
+    with allure.step(f'Выполнить QUERY: фильтр doneStatus={done_status}'):
+        response = api_client.query(
+            TODOS_PATH,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            content=f'doneStatus={done_status}',
+        )
     query_payload = response.json()
     todos = query_payload['todos']
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
+    assert create_payload['id'] in {t['id'] for t in todos}, (
+        f'QUERY did not include the created doneStatus={done_status} todo'
+    )
     for todo in todos:
         assert_todo_item(todo)
         assert todo['doneStatus'] is done_status, (
@@ -47,21 +57,30 @@ def test_046_query_done_status(api_client, _case_info, done_status, todo_factory
     [('Кейс 47.1 - doneStatus = true', 'true'), ('Кейс 47.2 - doneStatus = false', 'false')],
 )
 def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, todo_factory):
-    create_body = {'title': 'test title', 'doneStatus': True, 'description': 'test description'}
+    create_body = {
+        'title': 'test title',
+        'doneStatus': done_status == 'true',
+        'description': 'test description',
+    }
     create_response, create_payload = todo_factory(json=create_body)
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
 
-    response = api_client.query(
-        TODOS_PATH,
-        headers={'Content-Type': 'application/jsonpath'},
-        content=f'$.todos[?(@.doneStatus == {done_status})]',
-    )
+    with allure.step(f'Выполнить QUERY JSONPath: фильтр doneStatus={done_status}'):
+        response = api_client.query(
+            TODOS_PATH,
+            headers={'Content-Type': 'application/jsonpath'},
+            content=f'$.todos[?(@.doneStatus == {done_status})]',
+        )
     query_payload = response.json()
     todos = query_payload['todos']
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
+    assert create_payload['id'] in {t['id'] for t in todos}, (
+        f'QUERY JSONPath did not include the created doneStatus={done_status} todo'
+    )
     for todo in todos:
         assert_todo_item(todo)
         assert str(todo['doneStatus']).lower() == done_status, (
@@ -78,20 +97,29 @@ def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, tod
 )
 def test_048_query_done_status_json(api_client, _case_info, done_status, todo_factory):
     query_body = {'filter': {'doneStatus': done_status}}
-    create_body = {'title': 'test title', 'doneStatus': True, 'description': 'test description'}
+    create_body = {
+        'title': 'test title',
+        'doneStatus': done_status,
+        'description': 'test description',
+    }
     create_response, create_payload = todo_factory(json=create_body)
-    assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=create_body)
-    response = api_client.query(
-        TODOS_PATH,
-        headers={'Content-Type': 'application/vnd.thingifier.query+json'},
-        json=query_body,
-    )
+    with allure.step('Проверить создание todo'):
+        assert_content_type(response=create_response, expected_content_type='application/json')
+        assert_todo_item(create_payload)
+        assert_todo_item_matches(item=create_payload, expected=create_body)
+    with allure.step(f'Выполнить QUERY Structured JSON: фильтр doneStatus={done_status}'):
+        response = api_client.query(
+            TODOS_PATH,
+            headers={'Content-Type': 'application/vnd.thingifier.query+json'},
+            json=query_body,
+        )
     query_payload = response.json()
     todos = query_payload['todos']
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
+    assert create_payload['id'] in {t['id'] for t in todos}, (
+        f'QUERY Structured JSON did not include the created doneStatus={done_status} todo'
+    )
     for todo in todos:
         assert_todo_item(todo)
         assert todo['doneStatus'] is done_status, (
