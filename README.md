@@ -203,3 +203,8 @@ GitHub Actions (`.github/workflows/ci.yml`) запускается на push в 
 Свежий push в ветку отменяет предыдущий запуск для неё (`concurrency.cancel-in-progress`).
 Локально те же проверки: `uv run ruff check .`, `uv run ruff format --check .`,
 `uv run pytest -m smoke -q`, `uv run pytest -q --scoreboard`.
+
+Перезапуск прогона (`Re-run all jobs` / повторный `workflow_dispatch`) безопасен: `allure-results`
+выгружается с `overwrite`, поэтому в run остаётся ровно одна копия, а артефакт Pages получает имя
+`github-pages-<номер попытки>`, и `deploy-pages` находит ровно свой. Несколько независимых
+`workflow_dispatch` всё равно нужно делать по очереди: новый запуск отменяет незавершённый.
