@@ -1,3 +1,5 @@
+"""Сортировка, лимиты, пагинация и фильтрация /api/todos (#07–#21)."""
+
 import fnmatch
 import json
 import re
@@ -21,6 +23,7 @@ from api_challenges.clients import TODOS_PATH, ApiError
 @pytest.mark.regression
 @pytest.mark.challenge(7)
 def test_017_done_status_false(api_client):
+    """Фильтр ?doneStatus=false возвращает только незавершённые todos."""
     response = api_client.get(f'{TODOS_PATH}?doneStatus=false')
     payload = response.json()
     todos = payload['todos']
@@ -35,6 +38,7 @@ def test_017_done_status_false(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(7)
 def test_018_done_status_true(api_client, todo_factory):
+    """Фильтр ?doneStatus=true включает созданный завершённый todo."""
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     post_response, post_payload = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
@@ -63,6 +67,7 @@ def test_018_done_status_true(api_client, todo_factory):
     ('_case_info', 'id'), [('Кейс 19.01 - id > 1', 1), ('Кейс 19.02 - id > 3', 3)]
 )
 def test_019_id_greater_than(api_client, _case_info, id):
+    """Фильтр ?id>N возвращает todos со строго большим id."""
     response = api_client.get(f'{TODOS_PATH}?id>{id}')
     assert_status_code(response=response, expected_status_code=200)
     payload = response.json()
@@ -80,6 +85,7 @@ def test_019_id_greater_than(api_client, _case_info, id):
     ('_case_info', 'id'), [('Кейс 20.01 - id < 1', 1), ('Кейс 20.02 - id < 3', 3)]
 )
 def test_020_id_less_than(api_client, _case_info, id):
+    """Фильтр ?id<N возвращает todos со строго меньшим id."""
     response = api_client.get(f'{TODOS_PATH}?id<{id}')
     assert_status_code(response=response, expected_status_code=200)
     payload = response.json()
@@ -97,6 +103,7 @@ def test_020_id_less_than(api_client, _case_info, id):
     ('_case_info', 'id'), [('Кейс 21.01 - id = 2', 2), ('Кейс 21.02 - id = 4', 4)]
 )
 def test_021_id_equal_filter_id(api_client, _case_info, id):
+    """Фильтр ?id=N возвращает ровно один todo с этим id."""
     response = api_client.get(f'{TODOS_PATH}?id={id}')
     assert_status_code(response=response, expected_status_code=200)
     payload = response.json()
@@ -123,6 +130,7 @@ def test_021_id_equal_filter_id(api_client, _case_info, id):
     ],
 )
 def test_022_description_regexp(api_client, _case_info, description, regexp, todo_factory):
+    """Фильтр ?description~=regexp отбирает по регулярному выражению."""
     test_regexp = re.compile(regexp)
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
     post_response, post_payload = todo_factory(json=body, ensure_visible=True)
@@ -158,6 +166,7 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
     ],
 )
 def test_023_description_wildcard(api_client, _case_info, description, wildcard, todo_factory):
+    """Фильтр ?description*=wildcard отбирает по glob-шаблону."""
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
     post_response, post_payload = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
@@ -185,6 +194,7 @@ def test_023_description_wildcard(api_client, _case_info, description, wildcard,
 @pytest.mark.regression
 @pytest.mark.challenge(13)
 def test_024_sort_by_title_asc(api_client, todo_factory):
+    """Сортировка ?_sortBy=title по возрастанию включает созданный todo."""
     body = {'title': 'Aaa sort', 'doneStatus': False, 'description': 'sort test'}
     _, post_payload = todo_factory(json=body, ensure_visible=True)
     new_id = post_payload['id']
@@ -202,6 +212,7 @@ def test_024_sort_by_title_asc(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(14)
 def test_025_sort_by_id_desc(api_client):
+    """Сортировка ?_sortBy=-id по убыванию."""
     response = api_client.get(f'{TODOS_PATH}?_sortBy=-id')
     payload = response.json()
     assert_status_code(response=response, expected_status_code=200)
@@ -214,6 +225,7 @@ def test_025_sort_by_id_desc(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(15)
 def test_026_sort_multi(api_client):
+    """Сортировка по двум полям ?_sortBy=doneStatus,-id."""
     response = api_client.get(f'{TODOS_PATH}?_sortBy=doneStatus,-id')
     payload = response.json()
     assert_status_code(response=response, expected_status_code=200)
@@ -226,6 +238,7 @@ def test_026_sort_multi(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(16)
 def test_027_filter_and_sort(api_client):
+    """Фильтр doneStatus=false вместе с сортировкой ?_sortBy=-id."""
     response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_sortBy=-id')
     payload = response.json()
     assert_status_code(response=response, expected_status_code=200)
@@ -243,6 +256,7 @@ def test_027_filter_and_sort(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(17)
 def test_028_limit_8(api_client):
+    """Лимит ?_limit=8 возвращает ровно 8 todos."""
     response = api_client.get(f'{TODOS_PATH}?_limit=8')
     payload = response.json()
     assert_status_code(response=response, expected_status_code=200)
@@ -255,6 +269,7 @@ def test_028_limit_8(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(18)
 def test_029_limit_and_offset(api_client):
+    """Пагинация ?_limit=5&_offset без пересечения страниц."""
     with allure.step('Получить первую страницу (limit=5, offset=0)'):
         first_response = api_client.get(f'{TODOS_PATH}?_limit=5&_offset=0')
     assert_status_code(response=first_response, expected_status_code=200)
@@ -276,6 +291,7 @@ def test_029_limit_and_offset(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(19)
 def test_030_limit_too_high(api_client):
+    """Лимит выше максимума даёт 400 с текстом про _limit."""
     with pytest.raises(ApiError) as exc:
         api_client.get(f'{TODOS_PATH}?_limit=99999')
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=400)
@@ -287,6 +303,7 @@ def test_030_limit_too_high(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(20)
 def test_031_sort_and_limit_and_offset(api_client):
+    """Сортировка, лимит и смещение вместе: страницы не пересекаются."""
     with allure.step('Получить первую страницу (sort=-id, limit=5, offset=0)'):
         first_response = api_client.get(f'{TODOS_PATH}?_sortBy=-id&_limit=5&_offset=0')
     assert_status_code(response=first_response, expected_status_code=200)
@@ -310,6 +327,7 @@ def test_031_sort_and_limit_and_offset(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(21)
 def test_032_filter_and_limit_and_offset(api_client):
+    """Фильтр, лимит и смещение вместе: страницы не пересекаются."""
     with allure.step('Получить первую страницу (doneStatus=false, limit=2, offset=3)'):
         first_response = api_client.get(f'{TODOS_PATH}?doneStatus=false&_limit=2&_offset=3')
     assert_status_code(response=first_response, expected_status_code=200)

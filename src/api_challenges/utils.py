@@ -1,3 +1,9 @@
+"""Приведение ответов /api/todos к общему виду.
+
+JSON, XML, CSV, TSV и HTML разбираются в один словарь с ключами id, title,
+doneStatus, description, чтобы проверки в тестах не зависели от формата ответа.
+"""
+
 import csv
 import io
 import re
@@ -20,15 +26,27 @@ def _todo_to_dict(element: ET.Element) -> dict:
 
 
 def todo_from_xml(xml_text: str) -> dict:
+    """Разбор одного todo из XML.
+
+    :return: словарь с полями id, title, doneStatus, description.
+    """
     return _todo_to_dict(ET.fromstring(xml_text))
 
 
 def todos_from_xml(xml_text: str) -> list[dict]:
+    """Разбор списка todo из XML.
+
+    :return: список словарей с полями id, title, doneStatus, description.
+    """
     root = ET.fromstring(xml_text)
     return [_todo_to_dict(el) for el in root.findall('todo')]
 
 
 def request_todo_from_xml(xml_text: str) -> dict:
+    """Разбор тела запроса создания todo из XML.
+
+    :return: словарь с полями title, doneStatus, description, без id.
+    """
     element = ET.fromstring(xml_text)
     return {
         'title': _todo_text(element, 'title'),
@@ -44,6 +62,11 @@ def _html_cells(section_html: str) -> list[str]:
 
 
 def todos_from_html(html_text: str) -> list[dict]:
+    """Разбор HTML-экспорта списка todo.
+
+    :raises AssertionError: если нет thead или tbody, либо неожиданный заголовок.
+    :return: список словарей с полями id, title, doneStatus, description.
+    """
     thead = re.search(r'<thead>(.*?)</thead>', html_text, re.DOTALL)
     assert thead, 'Missing <thead> in HTML export'
     header = _html_cells(thead.group(1))
@@ -88,8 +111,18 @@ def _todos_from_delimited(text: str, *, delimiter: str) -> list[dict]:
 
 
 def todos_from_csv(csv_text: str) -> list[dict]:
+    """Разбор CSV-экспорта списка todo.
+
+    :raises AssertionError: если заголовок не совпадает с ожидаемым.
+    :return: список словарей с полями id, title, doneStatus, description.
+    """
     return _todos_from_delimited(csv_text, delimiter=',')
 
 
 def todos_from_tsv(tsv_text: str) -> list[dict]:
+    """Разбор TSV-экспорта списка todo.
+
+    :raises AssertionError: если заголовок не совпадает с ожидаемым.
+    :return: список словарей с полями id, title, doneStatus, description.
+    """
     return _todos_from_delimited(tsv_text, delimiter='\t')

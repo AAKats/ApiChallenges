@@ -48,11 +48,17 @@ select = [
     'ERA',        # закомментированный код
     'S',          # bandit: безопасность
     'PLE', 'PLW', # pylint: ошибки и предупреждения
-    'RUF',        # правила Ruff, включая RUF100 (лишние noqa)
+    'RUF',        # правила Ruff, включая RUF100
+    'D',          # docstring-правила pydocstyle
 ]
 ignore = [
     'E501',       # длину строк контролирует ruff format
+    'RUF001',     # кириллица в строках и докстрингах — намеренно, проект русскоязычный
+    'RUF002',     # кириллица в докстрингах — намеренно, проект русскоязычный
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = 'google'
 
 [tool.ruff.lint.per-file-ignores]
 'tests/**/*.py' = [

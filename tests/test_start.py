@@ -1,3 +1,5 @@
+"""Стартовые проверки: GUID сессии и список челленджей (#1–#2)."""
+
 import pytest
 
 from api_challenges.assertions import (
@@ -13,6 +15,7 @@ pytestmark = pytest.mark.smoke
 @pytest.mark.positive
 @pytest.mark.challenge(1)
 def test_001_challenger_guid_is_valid(api_client):
+    """Проверка, что фикстура создала валидный GUID сессии."""
     guid = api_client.challenger
     assert guid is not None, 'X-CHALLENGER missing: POST /api/challenger was not run in fixture'
     assert_valid_guid(guid)
@@ -21,6 +24,7 @@ def test_001_challenger_guid_is_valid(api_client):
 @pytest.mark.positive
 @pytest.mark.challenge(2)
 def test_002_get_all_challenges(api_client):
+    """Проверка ответа GET /api/challenges со всеми полями челленджей."""
     response = api_client.get('/api/challenges')
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')

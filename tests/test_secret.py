@@ -1,3 +1,5 @@
+"""Секретные эндпоинты: токен, заметки, Basic и Bearer (#88–#97)."""
+
 import pytest
 
 from api_challenges.assertions import (
@@ -15,6 +17,7 @@ from api_challenges.clients import BASIC_AUTHORIZATION, SECRET_PATH, ApiError
 @pytest.mark.regression
 @pytest.mark.challenge(88)
 def test_088_incorrect_user_password(api_client):
+    """Неверный Basic-пароль к /secret/token даёт 401."""
     with pytest.raises(ApiError) as exc:
         api_client.get(
             f'{SECRET_PATH}/token',
@@ -30,6 +33,7 @@ def test_088_incorrect_user_password(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(89)
 def test_089_correct_user_password(api_client):
+    """Верный Basic-пароль выдаёт валидный GUID-токен."""
     response = api_client.get(
         f'{SECRET_PATH}/token',
         headers={'Authorization': BASIC_AUTHORIZATION, 'Accept': '*/*'},
@@ -44,6 +48,7 @@ def test_089_correct_user_password(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(90)
 def test_090_not_valid_auth_token(api_client):
+    """GET /secret/note с неверным X-AUTH-TOKEN даёт 403."""
     with pytest.raises(ApiError) as exc:
         api_client.get(
             f'{SECRET_PATH}/note',
@@ -56,6 +61,7 @@ def test_090_not_valid_auth_token(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(91)
 def test_091_no_auth_token(api_client):
+    """GET /secret/note без токена даёт 401."""
     with pytest.raises(ApiError) as exc:
         api_client.get(f'{SECRET_PATH}/note', headers={'Accept': 'application/json'})
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=401)
@@ -65,6 +71,7 @@ def test_091_no_auth_token(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(92)
 def test_092_valid_auth_token(api_client, auth_token):
+    """GET /secret/note с валидным X-AUTH-TOKEN даёт 200 JSON."""
     _, x_auth_token = auth_token
 
     response = api_client.get(
@@ -78,6 +85,7 @@ def test_092_valid_auth_token(api_client, auth_token):
 @pytest.mark.regression
 @pytest.mark.challenge(93)
 def test_093_create_note(api_client, auth_token):
+    """POST /secret/note с валидным токеном создаёт заметку."""
     _, x_auth_token = auth_token
 
     body = {'note': 'Test note'}
@@ -101,6 +109,7 @@ def test_093_create_note(api_client, auth_token):
 @pytest.mark.regression
 @pytest.mark.challenge(94)
 def test_094_create_note_no_auth_token(api_client):
+    """POST /secret/note без токена даёт 401."""
     body = {'note': 'Test note'}
     with pytest.raises(ApiError) as exc:
         api_client.post(
@@ -115,6 +124,7 @@ def test_094_create_note_no_auth_token(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(95)
 def test_095_create_note_wrong_auth_token(api_client):
+    """POST /secret/note с неверным токеном даёт 403."""
     body = {'note': 'Test note'}
     with pytest.raises(ApiError) as exc:
         api_client.post(
@@ -133,6 +143,7 @@ def test_095_create_note_wrong_auth_token(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(96)
 def test_096_valid_bearer_token(api_client, auth_token):
+    """GET /secret/note с валидным Bearer-токеном даёт 200 JSON."""
     _, x_auth_token = auth_token
 
     response = api_client.get(
@@ -147,6 +158,7 @@ def test_096_valid_bearer_token(api_client, auth_token):
 @pytest.mark.regression
 @pytest.mark.challenge(97)
 def test_097_create_note_bearer(api_client, auth_token):
+    """POST /secret/note с Bearer-токеном создаёт заметку."""
     _, x_auth_token = auth_token
 
     body = {'note': 'Test note bearer'}

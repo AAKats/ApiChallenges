@@ -1,3 +1,5 @@
+"""Сессия челленджера: создание, GUID, список челленджей и их статусы (#70–#77)."""
+
 import json
 import uuid
 
@@ -18,6 +20,7 @@ from api_challenges.clients import CHALLENGER_HEADER, CHALLENGER_PATH, ApiError
 @pytest.mark.regression
 @pytest.mark.challenge(70)
 def test_070_get_challenger_progress(api_client):
+    """Получение прогресса сессии по её GUID через GET."""
     guid = api_client.challenger
     response = api_client.get(f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'})
     assert_status_code(response=response, expected_status_code=200)
@@ -32,6 +35,7 @@ def test_070_get_challenger_progress(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(71)
 def test_071_restore_progress(api_client):
+    """POST /api/challenger восстанавливает прогресс и возвращает пустое тело."""
     response = api_client.post(CHALLENGER_PATH, headers={'Accept': 'application/json'})
     assert_status_code(response=response, expected_status_code=200)
     assert response.text == '', f'Unexpected restore body: {response.text!r}'
@@ -41,6 +45,7 @@ def test_071_restore_progress(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(72)
 def test_072_get_progress(api_client):
+    """Повторное получение прогресса возвращает тот же GUID сессии."""
     guid = api_client.challenger
     get_response = api_client.get(
         f'{CHALLENGER_PATH}/{guid}', headers={'Accept': 'application/json'}
@@ -57,6 +62,7 @@ def test_072_get_progress(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(73)
 def test_073_restore_challenger_progress(api_client):
+    """GET и PUT прогресса challenger сохраняют исходный GUID."""
     guid = api_client.challenger
     with allure.step(f'Получить прогресс challenger {guid}'):
         get_response = api_client.get(
@@ -86,6 +92,7 @@ def test_073_restore_challenger_progress(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(74)
 def test_074_mismatch_guid(api_client):
+    """PUT с GUID в URL, не совпадающим с X-CHALLENGER, даёт 409."""
     guid = api_client.challenger
     new_guid = str(uuid.uuid4())
     with allure.step(f'Получить прогресс challenger {guid}'):
@@ -114,6 +121,7 @@ def test_074_mismatch_guid(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(75)
 def test_075_create_guid(api_client):
+    """PUT с новым GUID создаёт challenger и возвращает 201."""
     guid = api_client.challenger
     new_guid = str(uuid.uuid4())
     with allure.step(f'Получить прогресс challenger {guid}'):
@@ -148,6 +156,7 @@ def test_075_create_guid(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(76)
 def test_076_current_todos_database(api_client):
+    """Текущая база todos сессии отдаёт записи только с id и title."""
     guid = api_client.challenger
     get_response = api_client.get(
         f'{CHALLENGER_PATH}/database/{guid}',
@@ -165,6 +174,7 @@ def test_076_current_todos_database(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(77)
 def test_077_update_todos_database(api_client):
+    """PUT базы добавляет todo и возвращает 204 без тела."""
     guid = api_client.challenger
     with allure.step(f'Получить database challenger {guid}'):
         get_response = api_client.get(

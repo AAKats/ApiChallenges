@@ -1,3 +1,5 @@
+"""CRUD /api/todos, заголовки и форматы, экспорт CSV/HTML/TSV (#3–#99)."""
+
 import json
 
 import allure
@@ -27,6 +29,7 @@ from api_challenges.utils import (
 @pytest.mark.smoke
 @pytest.mark.challenge(3)
 def test_003_get_todos(api_client):
+    """GET /api/todos возвращает список с валидными полями."""
     response = api_client.get(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
@@ -40,6 +43,7 @@ def test_003_get_todos(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(4)
 def test_004_get_todo_not_plural(api_client):
+    """GET /api/todo (единственное число) возвращает 404."""
     with pytest.raises(ApiError) as exc:
         api_client.get('/api/todo')
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
@@ -50,6 +54,7 @@ def test_004_get_todo_not_plural(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(5)
 def test_005_get_todo_by_id(api_client):
+    """GET /api/todos/{id} возвращает todo по идентификатору."""
     with allure.step('Получить список todos'):
         response = api_client.get(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
@@ -72,6 +77,7 @@ def test_005_get_todo_by_id(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(6)
 def test_006_get_todo_not_exist(api_client):
+    """GET несуществующего todo даёт 404 с текстом ошибки."""
     with pytest.raises(ApiError) as exc:
         api_client.get(f'{TODOS_PATH}/999999')
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=404)
@@ -84,6 +90,7 @@ def test_006_get_todo_not_exist(api_client):
 @pytest.mark.smoke
 @pytest.mark.challenge(23)
 def test_007_create_minimal_body_todo(todo_factory):
+    """POST с одним title создаёт todo и отдаёт заголовок Location."""
     body = {'title': 'Test title'}
     response, payload = todo_factory(json=body)
     new_id = payload['id']
@@ -107,6 +114,7 @@ def test_007_create_minimal_body_todo(todo_factory):
     ],
 )
 def test_008_create_full_body_todo(_case_info, title, todo_factory):
+    """POST полного тела с граничными длинами title (1, 49, 50)."""
     body = {'title': title, 'doneStatus': True, 'description': 'test description'}
     response, payload = todo_factory(json=body)
     new_id = payload['id']
@@ -122,6 +130,7 @@ def test_008_create_full_body_todo(_case_info, title, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(34)
 def test_009_put_title_partial(api_client, todo_factory):
+    """PUT с одним title сбрасывает остальные поля к значениям по умолчанию."""
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
@@ -146,6 +155,7 @@ def test_009_put_title_partial(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(45)
 def test_010_patch_done_status(api_client, todo_factory):
+    """PATCH меняет только doneStatus, не трогая остальные поля."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
@@ -170,6 +180,7 @@ def test_010_patch_done_status(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(41)
 def test_011_delete_todo(api_client):
+    """DELETE удаляет todo, последующий GET даёт 404."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     with allure.step('Создание todo'):
         response = api_client.post(TODOS_PATH, json=post_body)
@@ -200,6 +211,7 @@ def test_011_delete_todo(api_client):
 @pytest.mark.negative
 @pytest.mark.regression
 def test_012_create_empty_body_todo(api_client):
+    """POST с пустым телом даёт 422 и сообщение об обязательном title."""
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json={})
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=422)
@@ -210,6 +222,7 @@ def test_012_create_empty_body_todo(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(25)
 def test_013_create_todo_too_long_title(api_client):
+    """POST с title длиной 51 символ даёт 422."""
     body = {'title': 'T' * 51, 'doneStatus': True, 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
@@ -224,6 +237,7 @@ def test_013_create_todo_too_long_title(api_client):
 @pytest.mark.negative
 @pytest.mark.regression
 def test_014_create_todo_id_in_body(api_client):
+    """POST с id в теле даёт 422: создавать с id нельзя."""
     body = {'id': 1, 'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
@@ -238,6 +252,7 @@ def test_014_create_todo_id_in_body(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(24)
 def test_015_create_todo_string_done_status(api_client):
+    """POST со строковым doneStatus даёт 422."""
     body = {'title': 'Test title', 'doneStatus': 'True', 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
@@ -248,6 +263,7 @@ def test_015_create_todo_string_done_status(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(39)
 def test_016_put_not_found(api_client):
+    """PUT несуществующего todo даёт 404."""
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     with pytest.raises(ApiError) as exc:
         api_client.put(f'{TODOS_PATH}/9999999', json=body)
@@ -258,6 +274,7 @@ def test_016_put_not_found(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(22)
 def test_033_head_request(api_client):
+    """HEAD /api/todos возвращает 200 JSON без тела."""
     response = api_client.head(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
@@ -268,6 +285,7 @@ def test_033_head_request(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(26)
 def test_034_too_long_description(api_client):
+    """POST с description длиной больше 200 даёт 422."""
     body = {
         'title': 'description too long',
         'doneStatus': True,
@@ -289,6 +307,7 @@ def test_034_too_long_description(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(27)
 def test_035_max_out_content(todo_factory):
+    """POST с title 50 и description 200 создаётся без ошибок."""
     body = {
         'title': '2*4*6*8*11*14*17*20*23*26*29*32*35*38*41*44*47*50*',
         'doneStatus': True,
@@ -306,6 +325,7 @@ def test_035_max_out_content(todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(28)
 def test_036_content_too_long(api_client):
+    """Тело больше 5000 байт даёт 413."""
     body = {'title': 'too much content', 'doneStatus': True, 'description': 'D' * 5001}
     with pytest.raises(ApiError) as exc:
         api_client.post(TODOS_PATH, json=body)
@@ -320,6 +340,7 @@ def test_036_content_too_long(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(29)
 def test_037_extra_field(api_client):
+    """POST с лишним полем даёт 422 с текстом про неизвестное поле."""
     body = {
         'title': 'extra field',
         'doneStatus': True,
@@ -339,6 +360,7 @@ def test_037_extra_field(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(30)
 def test_038_put_to_create(api_client):
+    """PUT с id в теле на несуществующий todo даёт 422."""
     body = {
         'id': 9999,
         'title': 'Test title',
@@ -358,6 +380,7 @@ def test_038_put_to_create(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(31)
 def test_039_update_via_post(api_client, todo_factory):
+    """POST /api/todos/{id} обновляет существующий todo."""
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
     updated_body = {
         'title': 'solution widget todo',
@@ -385,6 +408,7 @@ def test_039_update_via_post(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(32)
 def test_040_update_via_post_not_exist(api_client):
+    """POST на несуществующий id даёт 404."""
     body = {
         'title': 'solution widget todo',
         'doneStatus': True,
@@ -403,6 +427,7 @@ def test_040_update_via_post_not_exist(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(33)
 def test_041_update_via_put_full(api_client, todo_factory):
+    """PUT с полным телом обновляет todo по id в URL."""
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
     create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
@@ -431,6 +456,7 @@ def test_041_update_via_put_full(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(35)
 def test_042_update_via_put_body_id(api_client, todo_factory):
+    """PUT с id только в теле обновляет todo по этому id."""
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
     create_response, create_payload = todo_factory(json=create_body)
     new_id = create_payload['id']
@@ -459,6 +485,7 @@ def test_042_update_via_put_body_id(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(37)
 def test_043_update_via_put_no_title(api_client):
+    """PUT без title даёт 422."""
     body = {'doneStatus': True, 'description': 'created from the solution page'}
     with pytest.raises(ApiError) as exc:
         api_client.put(f'{TODOS_PATH}/10', json=body)
@@ -472,6 +499,7 @@ def test_043_update_via_put_no_title(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(38)
 def test_044_update_via_put_no_id(api_client):
+    """PUT без id и в URI, и в теле даёт 422."""
     body = {
         'title': 'update widget todo without id',
         'doneStatus': True,
@@ -489,6 +517,7 @@ def test_044_update_via_put_no_id(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(40)
 def test_045_update_via_put_amend_id(api_client):
+    """PUT с id в теле, отличным от id в URL, даёт 422."""
     body = {
         'id': 9999,
         'title': 'update widget todo without id',
@@ -507,6 +536,7 @@ def test_045_update_via_put_amend_id(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(46)
 def test_049_merge_patch(api_client, todo_factory):
+    """PATCH merge-patch обновляет только переданное поле."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
@@ -535,6 +565,7 @@ def test_049_merge_patch(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(47)
 def test_050_json_patch(api_client, todo_factory):
+    """PATCH json-patch заменяет поле операцией replace."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
@@ -563,6 +594,7 @@ def test_050_json_patch(api_client, todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(48)
 def test_051_options(api_client):
+    """OPTIONS /api/todos возвращает 200 text/plain без тела."""
     response = api_client.options(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='text/plain')
@@ -573,6 +605,7 @@ def test_051_options(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(49)
 def test_052_get_todos_xml(api_client):
+    """Accept: application/xml возвращает список в XML."""
     response = api_client.get(TODOS_PATH, headers={'Accept': 'application/xml'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/xml')
@@ -584,6 +617,7 @@ def test_052_get_todos_xml(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(51)
 def test_053_get_todos_any(api_client):
+    """Accept: */* возвращает JSON по умолчанию."""
     response = api_client.get(TODOS_PATH, headers={'Accept': '*/*'})
     payload = response.json()
     todos = payload['todos']
@@ -597,6 +631,7 @@ def test_053_get_todos_any(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(53)
 def test_054_get_todos_no_accept(api_client):
+    """Пустой Accept возвращает JSON по умолчанию."""
     response = api_client.get(TODOS_PATH, headers={'Accept': ''})
     payload = response.json()
     todos = payload['todos']
@@ -610,6 +645,7 @@ def test_054_get_todos_no_accept(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(54)
 def test_055_get_todos_no_acceptable(api_client):
+    """Accept: application/gzip даёт 406."""
     with pytest.raises(ApiError) as exc:
         api_client.get(TODOS_PATH, headers={'Accept': 'application/gzip'})
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=406)
@@ -627,6 +663,7 @@ def test_055_get_todos_no_acceptable(api_client):
     ],
 )
 def test_056_get_todo_calendar(api_client, _case_info, done_status, expected_status, todo_factory):
+    """Accept: text/calendar отдаёт todo в формате iCalendar."""
     create_body = {
         'title': 'calendar',
         'doneStatus': done_status,
@@ -661,6 +698,7 @@ def test_056_get_todo_calendar(api_client, _case_info, done_status, expected_sta
 @pytest.mark.regression
 @pytest.mark.challenge(56)
 def test_057_get_todos_q_xml_preferred(api_client):
+    """Accept с q-весами выбирает XML при большем весе."""
     response = api_client.get(
         TODOS_PATH, headers={'Accept': 'application/json;q=0.5, application/xml;q=1'}
     )
@@ -674,6 +712,7 @@ def test_057_get_todos_q_xml_preferred(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(57)
 def test_058_get_todos_q_json_preferred(api_client):
+    """Accept с q-весами выбирает JSON при большем весе."""
     response = api_client.get(
         TODOS_PATH, headers={'Accept': 'application/xml;q=0.5, application/json;q=1'}
     )
@@ -689,6 +728,7 @@ def test_058_get_todos_q_json_preferred(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(58)
 def test_059_get_todos_q_reject_all(api_client):
+    """Accept с q=0 для всех типов даёт 406."""
     with pytest.raises(ApiError) as exc:
         api_client.get(TODOS_PATH, headers={'Accept': 'application/json;q=0, application/xml;q=0'})
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=406)
@@ -701,6 +741,7 @@ def test_059_get_todos_q_reject_all(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(59)
 def test_060_get_todos_usupported_and_json(api_client):
+    """Неподдерживаемый Accept (problem+json) даёт 406."""
     with pytest.raises(ApiError) as exc:
         api_client.get(TODOS_PATH, headers={'Accept': 'application/problem+json'})
     assert_error_status_code(received_status_code=exc.value.status_code, expected_status_code=406)
@@ -711,6 +752,7 @@ def test_060_get_todos_usupported_and_json(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(60)
 def test_061_get_todos_text_and_xml(api_client):
+    """Accept: text/xml возвращает список в XML."""
     response = api_client.get(TODOS_PATH, headers={'Accept': 'text/xml'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='text/xml')
@@ -722,6 +764,7 @@ def test_061_get_todos_text_and_xml(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(61)
 def test_062_get_todos_vendor_xml(api_client):
+    """Vendor-тип application/vnd.apichallenges.todo+xml возвращает XML."""
     response = api_client.get(
         TODOS_PATH, headers={'Accept': 'application/vnd.apichallenges.todo+xml'}
     )
@@ -737,6 +780,7 @@ def test_062_get_todos_vendor_xml(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(62)
 def test_063_get_todos_xml_wildcard(api_client):
+    """Accept: application/*+xml возвращает application/todo+xml."""
     response = api_client.get(TODOS_PATH, headers={'Accept': 'application/*+xml'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/todo+xml')
@@ -748,6 +792,7 @@ def test_063_get_todos_xml_wildcard(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(63)
 def test_064_post_todo_xml(todo_factory):
+    """POST с телом XML и Accept: XML возвращает созданный todo в XML."""
     body = '''
            <todo>
            <title>test title</title>
@@ -771,6 +816,7 @@ def test_064_post_todo_xml(todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(65)
 def test_065_post_todo_vendor_xml(todo_factory):
+    """POST vendor-XML возвращает созданный todo в JSON."""
     body = '''
            <todo>
            <title>test title</title>
@@ -794,6 +840,7 @@ def test_065_post_todo_vendor_xml(todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(66)
 def test_066_post_unsupported_content_type(api_client):
+    """POST с Content-Type: application/gzip даёт 415."""
     body = {
         'title': 'solution widget todo',
         'doneStatus': True,
@@ -815,6 +862,7 @@ def test_066_post_unsupported_content_type(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(67)
 def test_067_get_csv_export(api_client):
+    """Экспорт /api/todos/export?format=csv отдаёт CSV."""
     get_response = api_client.get(f'{TODOS_PATH}/export?format=csv', headers={'Accept': 'text/csv'})
     assert_status_code(response=get_response, expected_status_code=200)
     assert_content_type(response=get_response, expected_content_type='text/csv')
@@ -827,6 +875,7 @@ def test_067_get_csv_export(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(68)
 def test_068_get_html_export(api_client):
+    """Экспорт /api/todos/export?format=html отдаёт HTML."""
     get_response = api_client.get(
         f'{TODOS_PATH}/export?format=html', headers={'Accept': 'text/html'}
     )
@@ -841,6 +890,7 @@ def test_068_get_html_export(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(69)
 def test_069_get_tab_delimited_export(api_client):
+    """Экспорт /api/todos/export?format=tsv отдаёт TSV."""
     get_response = api_client.get(
         f'{TODOS_PATH}/export?format=tsv', headers={'Accept': 'text/tab-separated-values'}
     )
@@ -855,6 +905,7 @@ def test_069_get_tab_delimited_export(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(78)
 def test_078_xml_to_json(todo_factory):
+    """POST XML с Accept: JSON возвращает todo в JSON."""
     body = '''
            <todo>
            <title>test title</title>
@@ -878,6 +929,7 @@ def test_078_xml_to_json(todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(79)
 def test_079_json_to_xml(todo_factory):
+    """POST JSON с Accept: XML возвращает todo в XML."""
     body = {'title': 'test title', 'doneStatus': True, 'description': 'created from XML'}
     create_response, _ = todo_factory(
         json=body,
@@ -895,6 +947,7 @@ def test_079_json_to_xml(todo_factory):
 @pytest.mark.regression
 @pytest.mark.challenge(98)
 def test_098_delete_all_todos(api_client):
+    """Удаление всех todos по кругам с восстановлением в finally."""
     delete_all_rounds = 3
     deleted_todos = []
     with allure.step('Получить todos'):
@@ -946,6 +999,7 @@ def test_098_delete_all_todos(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(99)
 def test_099_max_todos(api_client):
+    """Лимит 20 todos: следующий POST даёт 409."""
     max_todos_count = 20
     new_todo_ids = []
     with allure.step('Получить todos'):
@@ -995,6 +1049,7 @@ def test_099_max_todos(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(36)
 def test_100_put_no_id_body(api_client, todo_factory):
+    """PUT без id в теле обновляет todo по id из URL."""
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     response, post_payload = todo_factory(json=post_body)
     new_id = post_payload['id']
@@ -1022,6 +1077,7 @@ def test_100_put_no_id_body(api_client, todo_factory):
 @pytest.mark.smoke
 @pytest.mark.challenge(50)
 def test_101_get_todos_application_json(api_client):
+    """Accept: application/json возвращает список в JSON."""
     response = api_client.get(TODOS_PATH, headers={'Accept': 'application/json'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
@@ -1035,6 +1091,7 @@ def test_101_get_todos_application_json(api_client):
 @pytest.mark.smoke
 @pytest.mark.challenge(52)
 def test_102_get_todos_application_xml_json(api_client):
+    """Accept с XML и JSON без весов возвращает XML."""
     response = api_client.get(TODOS_PATH, headers={'Accept': 'application/xml, application/json'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/xml')
@@ -1047,6 +1104,7 @@ def test_102_get_todos_application_xml_json(api_client):
 @pytest.mark.regression
 @pytest.mark.challenge(64)
 def test_103_create_todo_application_json(todo_factory):
+    """POST с Content-Type и Accept: application/json создаёт todo."""
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
     response, post_payload = todo_factory(
         headers={'Content-Type': 'application/json', 'Accept': 'application/json'},

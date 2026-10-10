@@ -1,3 +1,9 @@
+"""Проверки ответов стенда.
+
+Все хелперы бросают AssertionError с указанием конкретного поля, чтобы в Allure
+было видно, что именно не сошлось.
+"""
+
 import itertools
 import re
 
@@ -7,12 +13,20 @@ from api_challenges.utils import todo_from_xml
 
 
 def assert_valid_guid(guid: str) -> None:
+    """Проверка, что строка похожа на GUID v4.
+
+    :raises AssertionError: если формат не совпадает.
+    """
     guid_re = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
     if not guid_re.fullmatch(guid):
         raise AssertionError(f'Incorrect GUID format: {guid!r}')
 
 
 def assert_status_code(*, response: httpx.Response, expected_status_code: int) -> None:
+    """Сверка кода ответа с ожидаемым.
+
+    :raises AssertionError: если коды различаются.
+    """
     status_code = response.status_code
     if status_code != expected_status_code:
         raise AssertionError(
@@ -21,6 +35,10 @@ def assert_status_code(*, response: httpx.Response, expected_status_code: int) -
 
 
 def assert_error_status_code(*, received_status_code: int, expected_status_code: int) -> None:
+    """Сверка кода из тела ошибки с ожидаемым.
+
+    :raises AssertionError: если коды различаются.
+    """
     if received_status_code != expected_status_code:
         raise AssertionError(
             f'Incorrect status code {received_status_code}, should be {expected_status_code}'
@@ -28,6 +46,10 @@ def assert_error_status_code(*, received_status_code: int, expected_status_code:
 
 
 def assert_content_type(*, response: httpx.Response, expected_content_type: str) -> None:
+    """Сверка заголовка Content-Type с ожидаемым.
+
+    :raises AssertionError: если значения различаются.
+    """
     content_type = response.headers.get('Content-Type')
     if content_type != expected_content_type:
         raise AssertionError(
@@ -36,6 +58,11 @@ def assert_content_type(*, response: httpx.Response, expected_content_type: str)
 
 
 def assert_challenge_item(item: dict) -> None:
+    """Проверка наличия и типов полей челленджа.
+
+    :raises AssertionError: если item не словарь, либо поле отсутствует
+        или имеет неверный тип.
+    """
     assert isinstance(item, dict), f'not a dict: {item!r}'
     assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
     assert isinstance(item.get('name'), str), f'name missing or not str: {item.get('name')!r}'
@@ -45,6 +72,11 @@ def assert_challenge_item(item: dict) -> None:
 
 
 def assert_todo_item(item: dict) -> None:
+    """Проверка наличия и типов полей todo.
+
+    :raises AssertionError: если item не словарь, либо поле отсутствует
+        или имеет неверный тип.
+    """
     assert isinstance(item, dict), f'not a dict: {item!r}'
     assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
     assert isinstance(item.get('title'), str), f'title missing or not str: {item.get('title')!r}'
@@ -57,6 +89,10 @@ def assert_todo_item(item: dict) -> None:
 
 
 def assert_todo_item_matches(*, item: dict, expected: dict) -> None:
+    """Сверка указанных полей todo с ожидаемыми.
+
+    :raises AssertionError: если поле отсутствует или значение различается.
+    """
     for field, expected_value in expected.items():
         if field not in item or item[field] != expected_value:
             raise AssertionError(
@@ -66,6 +102,12 @@ def assert_todo_item_matches(*, item: dict, expected: dict) -> None:
 
 
 def assert_sorted(items, sort_by):
+    """Проверка порядка выдачи по строке сортировки.
+
+    :param items: элементы выдачи в том порядке, в котором их вернул стенд.
+    :param sort_by: поля через запятую, с префиксом '-' для обратного порядка.
+    :raises AssertionError: если порядок не соответствует спецификации.
+    """
     fields = []
     for part in map(str.strip, sort_by.split(',')):
         desc = part.startswith('-')
@@ -83,6 +125,10 @@ def assert_sorted(items, sort_by):
 
 
 def assert_error_message(item, *, error_message):
+    """Сверка первого сообщения об ошибке с ожидаемым.
+
+    :raises AssertionError: если сообщения различаются.
+    """
     response_error_message = item['errorMessages'][0]
     assert response_error_message == error_message, (
         f'Incorrect error message: {response_error_message}, should be: {error_message}'
@@ -90,25 +136,47 @@ def assert_error_message(item, *, error_message):
 
 
 def assert_todo_item_xml(item: str) -> None:
+    """Проверка полей todo, разобранного из XML.
+
+    :raises AssertionError: если XML не разбирается или поля неверны.
+    """
     assert_todo_item(todo_from_xml(item))
 
 
 def assert_todo_item_matches_xml(*, item: str, expected: dict) -> None:
+    """Сверка полей todo из XML с ожидаемыми.
+
+    :raises AssertionError: если XML не разбирается или поля различаются.
+    """
     assert_todo_item_matches(item=todo_from_xml(item), expected=expected)
 
 
 def assert_todo_item_for_user_in_db(item: dict) -> None:
+    """Проверка полей todo в том виде, как их отдаёт эндпоинт пользователя.
+
+    Проверяются только id и title: в этом ответе остальных полей нет.
+
+    :raises AssertionError: если item не словарь или поля неверны.
+    """
     assert isinstance(item, dict), f'not a dict: {item!r}'
     assert isinstance(item.get('id'), int), f'id missing or not int: {item.get('id')!r}'
     assert isinstance(item.get('title'), str), f'title missing or not str: {item.get('title')!r}'
 
 
 def assert_note_item(item: dict) -> None:
+    """Проверка наличия и типа поля note.
+
+    :raises AssertionError: если item не словарь или note не строка.
+    """
     assert isinstance(item, dict), f'not a dict: {item!r}'
     assert isinstance(item.get('note'), str), f'note missing or not str: {item.get('note')!r}'
 
 
 def assert_note_item_matches(*, item: dict, expected: dict) -> None:
+    """Сверка указанных полей note с ожидаемыми.
+
+    :raises AssertionError: если поле отсутствует или значение различается.
+    """
     for field, expected_value in expected.items():
         if field not in item or item[field] != expected_value:
             raise AssertionError(

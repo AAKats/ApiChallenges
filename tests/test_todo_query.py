@@ -1,3 +1,5 @@
+"""QUERY-фильтрация и сортировка /api/todos (#42–#44)."""
+
 import allure
 import pytest
 
@@ -18,6 +20,7 @@ from api_challenges.clients import TODOS_PATH
     [('Кейс 46.1 - doneStatus = true', True), ('Кейс 46.2 - doneStatus = false', False)],
 )
 def test_046_query_done_status(api_client, _case_info, done_status, todo_factory):
+    """Фильтр QUERY по doneStatus в form-urlencoded."""
     create_body = {
         'title': 'test title',
         'doneStatus': done_status,
@@ -57,6 +60,7 @@ def test_046_query_done_status(api_client, _case_info, done_status, todo_factory
     [('Кейс 47.1 - doneStatus = true', 'true'), ('Кейс 47.2 - doneStatus = false', 'false')],
 )
 def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, todo_factory):
+    """Фильтр QUERY по doneStatus через JSONPath."""
     create_body = {
         'title': 'test title',
         'doneStatus': done_status == 'true',
@@ -96,6 +100,7 @@ def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, tod
     [('Кейс 48.1 - doneStatus = true', True), ('Кейс 48.2 - doneStatus = false', False)],
 )
 def test_048_query_done_status_json(api_client, _case_info, done_status, todo_factory):
+    """Фильтр QUERY по doneStatus через structured JSON."""
     query_body = {'filter': {'doneStatus': done_status}}
     create_body = {
         'title': 'test title',

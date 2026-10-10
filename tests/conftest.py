@@ -1,3 +1,5 @@
+"""Фикстуры, очистка сессии и сверка кредитов по опции --scoreboard."""
+
 import os
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -30,6 +32,13 @@ KNOWN_UNCREDITED = {
 
 @dataclass(frozen=True)
 class Scoreboard:
+    """Итог сверки кредитов, собранный по завершении прогона.
+
+    Считается только по челленджам, чьи тесты реально попали в run: всё, что вне
+    скоупа, игнорируется, а известные ограничения, которые засчитались, попадают
+    в stale как устаревшие.
+    """
+
     ran: frozenset[int]
     credited: int
     total: int
@@ -41,6 +50,8 @@ class Scoreboard:
 
 @dataclass
 class _RunState:
+    """Состояние текущего прогона, общее для всех хуков pytest."""
+
     challenger: str | None = None
     challenge_by_nodeid: dict[str, int] = field(default_factory=dict)
     outcomes: dict[int, str] = field(default_factory=dict)
@@ -53,16 +64,26 @@ _RUN = _RunState()
 
 @pytest.fixture(scope='session')
 def settings() -> Settings:
+    """Настройки стенда, создаваемые один раз на сессию."""
     return get_settings()
 
 
 @pytest.fixture(scope='session')
 def restore_guid() -> str | None:
+    """GUID сохранённой сессии из переменной API_CHALLENGES_RESTORE_GUID.
+
+    :return: идентификатор сессии либо None, если переменная не задана.
+    """
     return os.environ.get('API_CHALLENGES_RESTORE_GUID') or None
 
 
 @pytest.fixture(scope='session')
 def api_client(settings, restore_guid) -> Iterator[BaseClient]:
+    """HTTP-клиент с одной сессией на весь прогон.
+
+    Создаёт сессию challenger, запоминает её GUID для сверки кредитов
+    и закрывает соединение по завершении прогона.
+    """
     headers = {CHALLENGER_HEADER: restore_guid} if restore_guid else None
     client = BaseClient(
         base_url=settings.api_base_url, timeout=settings.api_timeout_seconds, headers=headers
@@ -76,6 +97,10 @@ def api_client(settings, restore_guid) -> Iterator[BaseClient]:
 
 @pytest.fixture
 def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, dict]]]:
+    """Фабрика todos, удаляющая созданные записи после теста.
+
+    :return: функция, возвращающая ответ создания и его полезную нагрузку.
+    """
     created_ids: list[int] = []
 
     def _create(**kwargs: object) -> tuple[httpx.Response, dict]:
@@ -92,6 +117,10 @@ def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, dic
 
 
 def _is_todo_visible(api_client: BaseClient, todo_id: int) -> bool:
+    """Проверка, что созданный todo попал в общий список стенда.
+
+    :return: True, если todo с таким id найден в GET /api/todos.
+    """
     response = api_client.get(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     return any(todo['id'] == todo_id for todo in response.json()['todos'])
@@ -104,6 +133,14 @@ def _create_todo(
     attempts: int = 5,
     **kwargs: object,
 ) -> tuple[httpx.Response, dict]:
+    """Создание todo с опциональной проверкой его видимости.
+
+    При ensure_visible создание повторяется, пока todo не появится в выборке;
+    недобитые записи удаляются, чтобы не засорять стенд.
+
+    :raises AssertionError: если после всех попыток todo остался невидим.
+    :return: ответ создания и его полезная нагрузка.
+    """
     total = attempts if ensure_visible else 1
     last_id = None
     for attempt in range(1, total + 1):
@@ -130,6 +167,10 @@ def _create_todo(
 
 @pytest.fixture
 def auth_token(api_client) -> tuple[httpx.Response, str]:
+    """Токен Basic-аутентификации, запрошенный отдельно от основной сессии.
+
+    :return: ответ эндпоинта и полученный токен.
+    """
     with allure.step('Получение auth token'):
         response = api_client.get(
             f'{SECRET_PATH}/token',
@@ -143,6 +184,7 @@ def auth_token(api_client) -> tuple[httpx.Response, str]:
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
+    """Регистрация опций командной строки: --challenge и --scoreboard."""
     parser.addoption(
         '--challenge',
         type=int,
@@ -160,6 +202,7 @@ def pytest_collection_modifyitems(
     config: pytest.Config,
     items: list[pytest.Item],
 ) -> None:
+    """Фильтрация тестов по опции --challenge и сортировка их по номеру."""
     challenge = config.getoption('--challenge')
     if challenge is not None:
         items[:] = [
@@ -173,6 +216,7 @@ def pytest_collection_modifyitems(
             pytest.fail(f'No tests found for --challenge {challenge}', pytrace=False)
 
     def _challenge_number(item: pytest.Item) -> float:
+        """Номер челленджа из маркера, либо бесконечность для тестов без него."""
         marker = item.get_closest_marker('challenge')
         if marker is None or not marker.args:
             return float('inf')
@@ -187,6 +231,7 @@ def pytest_collection_modifyitems(
 
 
 def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Сбор исходов каждого теста для сверки кредитов в конце прогона."""
     challenge = _RUN.challenge_by_nodeid.get(report.nodeid)
     if challenge is None:
         return
@@ -197,6 +242,10 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
 
 
 def _xdist_workers(config: pytest.Config) -> int:
+    """Определение числа воркеров xdist.
+
+    :return: количество процессов либо 0, если xdist не подключён.
+    """
     if not config.pluginmanager.hasplugin('xdist'):
         return 0
     value = config.getoption('numprocesses', 0)
@@ -206,6 +255,10 @@ def _xdist_workers(config: pytest.Config) -> int:
 
 
 def _fetch_challenges(settings: Settings, guid: str) -> list[dict]:
+    """Запрос списка челленджей с той же сессией, на которой шёл прогон.
+
+    :return: список словарей челленджей.
+    """
     with httpx.Client(
         base_url=settings.api_base_url,
         timeout=settings.api_timeout_seconds,
@@ -217,6 +270,11 @@ def _fetch_challenges(settings: Settings, guid: str) -> list[dict]:
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Сверка кредитов по итогам прогона при включённом --scoreboard.
+
+    Пропускается, если не удалось получить сессию или список челленджей:
+    в этом случае причина уходит в skip_reason и печатается вместо итогов.
+    """
     if not session.config.getoption('--scoreboard'):
         return
     if workers := _xdist_workers(session.config):
@@ -257,10 +315,15 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 
 
 def _format_ids(ids: frozenset[int]) -> str:
+    """Сортированная печать набора id через запятую.
+
+    :return: id через запятую либо "none", если набор пуст.
+    """
     return ', '.join(str(i) for i in sorted(ids)) or 'none'
 
 
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
+    """Вывод итогового scoreboard в конце прогона."""
     if _RUN.skip_reason:
         terminalreporter.write_sep('-', f'scoreboard: disabled ({_RUN.skip_reason})')
         return
