@@ -104,6 +104,7 @@ def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, dic
     created_ids: list[int] = []
 
     def _create(**kwargs: object) -> tuple[httpx.Response, dict]:
+        """Создание todo и запоминание его id для последующей очистки."""
         response, create_payload = _create_todo(api_client, **kwargs)
         created_ids.append(create_payload['id'])
         return response, create_payload

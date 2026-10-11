@@ -23,10 +23,12 @@ _MAX_BODY_CHARS = 50 * 1024
 
 
 def _mask_secret_value(key: str, value: str) -> str:
+    """Замена значения чувствительного заголовка на маску."""
     return '***' if key.lower() in _MASKED_HEADERS and value else value
 
 
 def _mask_token_in_payload(value: Any) -> Any:
+    """Рекурсивная маскировка значений полей token в нагрузке."""
     if isinstance(value, dict):
         return {
             k: ('***' if k.lower() == 'token' and v else _mask_token_in_payload(v))
@@ -38,6 +40,7 @@ def _mask_token_in_payload(value: Any) -> Any:
 
 
 def _format_body(body: bytes, content_type: str) -> str:
+    """Читаемое представление тела: формат JSON, маскировка token."""
     text = body.decode('utf-8', errors='replace')
     if 'json' in content_type.lower():
         try:
@@ -52,6 +55,7 @@ def _format_body(body: bytes, content_type: str) -> str:
 
 
 def _attach_request(request: httpx.Request, method: str, path: str) -> None:
+    """Вложение запроса в Allure с маскировкой чувствительных значений."""
     headers = '\n'.join(f'{k}: {_mask_secret_value(k, v)}' for k, v in request.headers.items())
     body = _format_body(request.content, request.headers.get('content-type', ''))
     text = f'{method} {request.url}\n\n{headers}\n\n{body}'
@@ -61,6 +65,7 @@ def _attach_request(request: httpx.Request, method: str, path: str) -> None:
 
 
 def _attach_response(response: httpx.Response) -> None:
+    """Вложение ответа в Allure с маскировкой чувствительных значений."""
     headers = '\n'.join(f'{k}: {_mask_secret_value(k, v)}' for k, v in response.headers.items())
     body = _format_body(response.content, response.headers.get('content-type', ''))
     text = f'{response.status_code}\n\n{headers}\n\n{body}'

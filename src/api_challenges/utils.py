@@ -12,11 +12,13 @@ from html import unescape
 
 
 def _todo_text(element: ET.Element, field: str) -> str:
+    """Текст дочернего XML-элемента или пустая строка, если его нет."""
     child = element.find(field)
     return child.text if child is not None and child.text is not None else ''
 
 
 def _todo_to_dict(element: ET.Element) -> dict:
+    """Словарь todo из XML-элемента с полями id, title, doneStatus, description."""
     return {
         'id': int(_todo_text(element, 'id')),
         'title': _todo_text(element, 'title'),
@@ -56,6 +58,7 @@ def request_todo_from_xml(xml_text: str) -> dict:
 
 
 def _html_cells(section_html: str) -> list[str]:
+    """Текст ячеек строки HTML-таблицы без HTML-сущностей."""
     return [
         unescape(cell) for cell in re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', section_html, re.DOTALL)
     ]
@@ -92,6 +95,7 @@ def todos_from_html(html_text: str) -> list[dict]:
 
 
 def _todos_from_delimited(text: str, *, delimiter: str) -> list[dict]:
+    """Разбор списка todo из текста с разделителем CSV или TSV."""
     rows = list(csv.reader(io.StringIO(text), delimiter=delimiter))
     header = rows[0]
     assert header == ['id', 'title', 'doneStatus', 'description'], f'Unexpected header: {header!r}'
