@@ -1,3 +1,5 @@
+![CI](https://github.com/AAKats/ApiChallenges/workflows/ci.yml/badge.svg)
+[Allure-отчёт](https://aakats.github.io/Marketplace/)
 # API Challenges — REST API Test Automation
 
 Автоматизация REST-тестирования веб-сервиса [API Challenges](https://apichallenges.com)
