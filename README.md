@@ -1,4 +1,4 @@
-![CI](https://github.com/AAKats/ApiChallenges/workflows/ci.yml/badge.svg)
+![CI](https://github.com/AAKats/ApiChallenges/actions/workflows/ci.yml)
 [Allure-отчёт](https://aakats.github.io/ApiChallenges/)
 # API Challenges — REST API Test Automation
 
