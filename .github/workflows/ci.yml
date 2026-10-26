@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync --frozen
       - run: uv run pytest -q --scoreboard --alluredir=allure-results --clean-alluredir
       - name: Upload allure-results          # всегда, даже при падении тестов
