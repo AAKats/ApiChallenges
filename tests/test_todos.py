@@ -16,7 +16,7 @@ from api_challenges.assertions import (
     assert_todo_item_xml,
 )
 from api_challenges.clients import TODOS_PATH, ApiError
-from api_challenges.models import TodoList, TodoItem
+from api_challenges.models import TodoItem, TodoList
 from api_challenges.utils import (
     request_todo_from_xml,
     todos_from_csv,

@@ -57,6 +57,7 @@ def test_todo_item_rejects_invalid_data(changes, removed_field, expected_locatio
     locations = {error['loc'] for error in exc.value.errors()}
     assert expected_location in locations
 
+
 def test_todo_list_rejects_invalid_nested_todo():
     """Ошибка вложенной задачи содержит путь до неверного поля."""
     payload = {

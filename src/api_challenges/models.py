@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict
 
+
 class TodoItem(BaseModel):
     """Задача в ответе API."""
 
@@ -9,7 +10,7 @@ class TodoItem(BaseModel):
 
     id: int
     title: str
-    doneStatus: bool
+    doneStatus: bool  # noqa: N815
     description: str
 
 

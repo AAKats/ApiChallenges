@@ -97,14 +97,14 @@ def api_client(settings, restore_guid) -> Iterator[BaseClient]:
 
 
 @pytest.fixture
-def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, dict]]]:
+def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, TodoItem]]]:
     """Фабрика todos, удаляющая созданные записи после теста.
 
     :return: функция, возвращающая ответ создания и его полезную нагрузку.
     """
     created_ids: list[int] = []
 
-    def _create(**kwargs: object) -> tuple[httpx.Response, dict]:
+    def _create(**kwargs: object) -> tuple[httpx.Response, TodoItem]:
         """Создание todo и запоминание его id для последующей очистки."""
         response, create_payload = _create_todo(api_client, **kwargs)
         created_ids.append(create_payload['id'])
