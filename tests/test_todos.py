@@ -16,6 +16,7 @@ from api_challenges.assertions import (
     assert_todo_item_xml,
 )
 from api_challenges.clients import TODOS_PATH, ApiError
+from api_challenges.models import TodoList, TodoItem
 from api_challenges.utils import (
     request_todo_from_xml,
     todos_from_csv,
@@ -33,10 +34,7 @@ def test_003_get_todos(api_client):
     response = api_client.get(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
-    payload = response.json()
-    todos = payload['todos']
-    for todo in todos:
-        assert_todo_item(todo)
+    TodoList.model_validate(response.json())
 
 
 @pytest.mark.negative
@@ -59,18 +57,16 @@ def test_005_get_todo_by_id(api_client):
         response = api_client.get(TODOS_PATH)
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
-    payload = response.json()
-    todos = payload['todos']
-    assert todos, 'No todos in the session'
-    assert_todo_item(todos[0])
-    todo_id = todos[0]['id']
+    payload = TodoList.model_validate(response.json())
+    assert payload.todos, 'No todos in the session'
+    todo_id = payload.todos[0].id
     with allure.step(f'Получить todo по id {todo_id}'):
         response_with_id = api_client.get(f'{TODOS_PATH}/{todo_id}')
     assert_status_code(response=response_with_id, expected_status_code=200)
     assert_content_type(response=response_with_id, expected_content_type='application/json')
-    found = response_with_id.json()['todos'][0]
-    assert_todo_item(found)
-    assert found['id'] == todo_id, f'Wrong id returned: expected {todo_id!r}'
+    found_payload = TodoList.model_validate(response_with_id.json())
+    found = found_payload.todos[0]
+    assert found.id == todo_id, f'Wrong id returned: expected {todo_id!r}'
 
 
 @pytest.mark.negative
@@ -92,12 +88,11 @@ def test_006_get_todo_not_exist(api_client):
 def test_007_create_minimal_body_todo(todo_factory):
     """POST с одним title создаёт todo и отдаёт заголовок Location."""
     body = {'title': 'Test title'}
-    response, payload = todo_factory(json=body)
-    new_id = payload['id']
+
+    response, todo = todo_factory(json=body)
     assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(payload)
-    assert_todo_item_matches(item=payload, expected=body)
-    assert response.headers.get('Location') == f'{TODOS_PATH}/{new_id}', (
+    assert_todo_item_matches(item=todo.model_dump(), expected=body)
+    assert response.headers.get('Location') == f'{TODOS_PATH}/{todo.id}', (
         f'Unexpected Location: {response.headers.get('Location')!r}'
     )
 
@@ -116,11 +111,10 @@ def test_007_create_minimal_body_todo(todo_factory):
 def test_008_create_full_body_todo(_case_info, title, todo_factory):
     """POST полного тела с граничными длинами title (1, 49, 50)."""
     body = {'title': title, 'doneStatus': True, 'description': 'test description'}
-    response, payload = todo_factory(json=body)
-    new_id = payload['id']
+    response, todo = todo_factory(json=body)
+    new_id = todo.id
     assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(payload)
-    assert_todo_item_matches(item=payload, expected=body)
+    assert_todo_item_matches(item=todo.model_dump(), expected=body)
     assert response.headers.get('Location') == f'{TODOS_PATH}/{new_id}', (
         f'Unexpected Location: {response.headers.get('Location')!r}'
     )
@@ -132,23 +126,21 @@ def test_008_create_full_body_todo(_case_info, title, todo_factory):
 def test_009_put_title_partial(api_client, todo_factory):
     """PUT с одним title сбрасывает остальные поля к значениям по умолчанию."""
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    response, post_payload = todo_factory(json=post_body)
-    new_id = post_payload['id']
+    response, post_todo = todo_factory(json=post_body)
+    new_id = post_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=post_body)
 
     put_body = {'title': 'test updated title'}
     with allure.step('Обновить todo (PUT)'):
         put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
-    put_payload = put_response.json()
+    put_todo = TodoItem.model_validate(put_response.json())
     put_expected = {'title': put_body['title'], 'doneStatus': False, 'description': ''}
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=put_response, expected_status_code=200)
         assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=put_expected)
+        assert_todo_item_matches(item=put_todo.model_dump(), expected=put_expected)
 
 
 @pytest.mark.positive
@@ -157,23 +149,21 @@ def test_009_put_title_partial(api_client, todo_factory):
 def test_010_patch_done_status(api_client, todo_factory):
     """PATCH меняет только doneStatus, не трогая остальные поля."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response, post_payload = todo_factory(json=post_body)
-    new_id = post_payload['id']
+    response, post_todo = todo_factory(json=post_body)
+    new_id = post_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=post_body)
 
     patch_body = {'doneStatus': True}
     with allure.step('Обновить todo (PATCH)'):
         patch_response = api_client.patch(f'{TODOS_PATH}/{new_id}', json=patch_body)
-    patch_payload = patch_response.json()
-    patch_expected = {**post_payload, 'doneStatus': patch_body['doneStatus']}
+    patch_todo = TodoItem.model_validate(patch_response.json())
+    patch_expected = {**post_todo.model_dump(), 'doneStatus': patch_body['doneStatus']}
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=patch_response, expected_status_code=200)
         assert_content_type(response=patch_response, expected_content_type='application/json')
-        assert_todo_item(patch_payload)
-        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
+        assert_todo_item_matches(item=patch_todo.model_dump(), expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -315,10 +305,9 @@ def test_035_max_out_content(todo_factory):
         '78*81*84*87*90*93*96*100*104*108*112*116*120*124*128*132*136*140*144*148*'
         '152*156*160*164*168*172*176*180*184*188*192*196*200*',
     }
-    response, post_payload = todo_factory(json=body)
+    response, post_todo = todo_factory(json=body)
     assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=body)
+    assert_todo_item_matches(item=post_todo.model_dump(), expected=body)
 
 
 @pytest.mark.negative
@@ -387,21 +376,19 @@ def test_039_update_via_post(api_client, todo_factory):
         'doneStatus': True,
         'description': 'created from the solution page',
     }
-    create_response, create_payload = todo_factory(json=create_body)
-    new_id = create_payload['id']
+    create_response, create_todo = todo_factory(json=create_body)
+    new_id = create_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
 
     with allure.step('Обновить todo (POST)'):
         response = api_client.post(f'{TODOS_PATH}/{new_id}', json=updated_body)
-    post_payload = response.json()
+    post_todo = TodoItem.model_validate(response.json())
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=response, expected_status_code=200)
         assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=updated_body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=updated_body)
 
 
 @pytest.mark.negative
@@ -429,12 +416,11 @@ def test_040_update_via_post_not_exist(api_client):
 def test_041_update_via_put_full(api_client, todo_factory):
     """PUT с полным телом обновляет todo по id в URL."""
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
-    create_response, create_payload = todo_factory(json=create_body)
-    new_id = create_payload['id']
+    create_response, create_todo = todo_factory(json=create_body)
+    new_id = create_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
     updated_body = {
         'id': new_id,
         'title': 'full update widget todo',
@@ -444,12 +430,11 @@ def test_041_update_via_put_full(api_client, todo_factory):
 
     with allure.step('Обновить todo (PUT)'):
         put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=updated_body)
-    put_payload = put_response.json()
+    put_todo = TodoItem.model_validate(put_response.json())
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=put_response, expected_status_code=200)
         assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=updated_body)
+        assert_todo_item_matches(item=put_todo.model_dump(), expected=updated_body)
 
 
 @pytest.mark.positive
@@ -458,12 +443,11 @@ def test_041_update_via_put_full(api_client, todo_factory):
 def test_042_update_via_put_body_id(api_client, todo_factory):
     """PUT с id только в теле обновляет todo по этому id."""
     create_body = {'title': 'test title', 'doneStatus': False, 'description': 'test description'}
-    create_response, create_payload = todo_factory(json=create_body)
-    new_id = create_payload['id']
+    create_response, create_todo = todo_factory(json=create_body)
+    new_id = create_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
     updated_body = {
         'id': new_id,
         'title': 'full update widget todo',
@@ -473,12 +457,11 @@ def test_042_update_via_put_body_id(api_client, todo_factory):
 
     with allure.step('Обновить todo (PUT)'):
         put_response = api_client.put(TODOS_PATH, json=updated_body)
-    put_payload = put_response.json()
+    put_todo = TodoItem.model_validate(put_response.json())
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=put_response, expected_status_code=200)
         assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=updated_body)
+        assert_todo_item_matches(item=put_todo.model_dump(), expected=updated_body)
 
 
 @pytest.mark.negative
@@ -538,12 +521,11 @@ def test_045_update_via_put_amend_id(api_client):
 def test_049_merge_patch(api_client, todo_factory):
     """PATCH merge-patch обновляет только переданное поле."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response, post_payload = todo_factory(json=post_body)
-    new_id = post_payload['id']
+    response, post_todo = todo_factory(json=post_body)
+    new_id = post_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=post_body)
 
     patch_body = {'description': 'patched with merge patch'}
     with allure.step('Обновить todo (merge patch)'):
@@ -552,13 +534,12 @@ def test_049_merge_patch(api_client, todo_factory):
             headers={'Content-Type': 'application/merge-patch+json'},
             json=patch_body,
         )
-    patch_payload = patch_response.json()
-    patch_expected = {**post_payload, 'description': 'patched with merge patch'}
+    patch_todo = TodoItem.model_validate(patch_response.json())
+    patch_expected = {**post_todo.model_dump(), 'description': 'patched with merge patch'}
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=patch_response, expected_status_code=200)
         assert_content_type(response=patch_response, expected_content_type='application/json')
-        assert_todo_item(patch_payload)
-        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
+        assert_todo_item_matches(item=patch_todo.model_dump(), expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -567,12 +548,11 @@ def test_049_merge_patch(api_client, todo_factory):
 def test_050_json_patch(api_client, todo_factory):
     """PATCH json-patch заменяет поле операцией replace."""
     post_body = {'title': 'Test title', 'doneStatus': False, 'description': 'test description'}
-    response, post_payload = todo_factory(json=post_body)
-    new_id = post_payload['id']
+    response, post_todo = todo_factory(json=post_body)
+    new_id = post_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=post_body)
 
     patch_body = [{'op': 'replace', 'path': '/title', 'value': 'patched with json patch'}]
     with allure.step('Обновить todo (json patch)'):
@@ -581,13 +561,12 @@ def test_050_json_patch(api_client, todo_factory):
             headers={'Content-Type': 'application/json-patch+json'},
             json=patch_body,
         )
-    patch_payload = patch_response.json()
-    patch_expected = {**post_payload, 'title': 'patched with json patch'}
+    patch_todo = TodoItem.model_validate(patch_response.json())
+    patch_expected = {**post_todo.model_dump(), 'title': 'patched with json patch'}
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=patch_response, expected_status_code=200)
         assert_content_type(response=patch_response, expected_content_type='application/json')
-        assert_todo_item(patch_payload)
-        assert_todo_item_matches(item=patch_payload, expected=patch_expected)
+        assert_todo_item_matches(item=patch_todo.model_dump(), expected=patch_expected)
 
 
 @pytest.mark.positive
@@ -669,12 +648,11 @@ def test_056_get_todo_calendar(api_client, _case_info, done_status, expected_sta
         'doneStatus': done_status,
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body)
-    new_id = create_payload['id']
+    create_response, create_todo = todo_factory(json=create_body)
+    new_id = create_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
 
     with allure.step(f'Получить todo {new_id} как calendar'):
         calendar_response = api_client.get(
@@ -824,7 +802,7 @@ def test_065_post_todo_vendor_xml(todo_factory):
            <description>created with vendor XML</description>
            </todo>
            '''
-    create_response, create_payload = todo_factory(
+    create_response, create_todo = todo_factory(
         content=body,
         headers={
             'Content-Type': 'application/vnd.apichallenges.todo+xml',
@@ -832,8 +810,7 @@ def test_065_post_todo_vendor_xml(todo_factory):
         },
     )
     assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(create_payload)
-    assert_todo_item_matches(item=create_payload, expected=request_todo_from_xml(body))
+    assert_todo_item_matches(item=create_todo.model_dump(), expected=request_todo_from_xml(body))
 
 
 @pytest.mark.negative
@@ -913,14 +890,13 @@ def test_078_xml_to_json(todo_factory):
            <description>created from XML</description>
            </todo>
            '''
-    create_response, payload = todo_factory(
+    create_response, todo = todo_factory(
         content=body,
         headers={'Content-Type': 'application/xml', 'Accept': 'application/json'},
     )
     assert_content_type(response=create_response, expected_content_type='application/json')
-    assert_todo_item(payload)
     assert_todo_item_matches(
-        item=payload,
+        item=todo.model_dump(),
         expected={'title': 'test title', 'doneStatus': True, 'description': 'created from XML'},
     )
 
@@ -1051,12 +1027,11 @@ def test_099_max_todos(api_client):
 def test_100_put_no_id_body(api_client, todo_factory):
     """PUT без id в теле обновляет todo по id из URL."""
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    response, post_payload = todo_factory(json=post_body)
-    new_id = post_payload['id']
+    response, post_todo = todo_factory(json=post_body)
+    new_id = post_todo.id
     with allure.step('Проверить создание todo'):
         assert_content_type(response=response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=post_body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=post_body)
 
     put_body = {
         'title': 'Updated test title',
@@ -1065,12 +1040,11 @@ def test_100_put_no_id_body(api_client, todo_factory):
     }
     with allure.step('Обновить todo (PUT)'):
         put_response = api_client.put(f'{TODOS_PATH}/{new_id}', json=put_body)
-    put_payload = put_response.json()
+    put_todo = TodoItem.model_validate(put_response.json())
     with allure.step('Проверить обновление todo'):
         assert_status_code(response=put_response, expected_status_code=200)
         assert_content_type(response=put_response, expected_content_type='application/json')
-        assert_todo_item(put_payload)
-        assert_todo_item_matches(item=put_payload, expected=put_body)
+        assert_todo_item_matches(item=put_todo.model_dump(), expected=put_body)
 
 
 @pytest.mark.positive
@@ -1081,10 +1055,7 @@ def test_101_get_todos_application_json(api_client):
     response = api_client.get(TODOS_PATH, headers={'Accept': 'application/json'})
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
-    payload = response.json()
-    todos = payload['todos']
-    for todo in todos:
-        assert_todo_item(todo)
+    TodoList.model_validate(response.json())
 
 
 @pytest.mark.positive
@@ -1106,10 +1077,9 @@ def test_102_get_todos_application_xml_json(api_client):
 def test_103_create_todo_application_json(todo_factory):
     """POST с Content-Type и Accept: application/json создаёт todo."""
     post_body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    response, post_payload = todo_factory(
+    response, post_todo = todo_factory(
         headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
         json=post_body,
     )
     assert_content_type(response=response, expected_content_type='application/json')
-    assert_todo_item(post_payload)
-    assert_todo_item_matches(item=post_payload, expected=post_body)
+    assert_todo_item_matches(item=post_todo.model_dump(), expected=post_body)

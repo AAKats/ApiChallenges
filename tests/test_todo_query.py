@@ -26,11 +26,10 @@ def test_046_query_done_status(api_client, _case_info, done_status, todo_factory
         'doneStatus': done_status,
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body, ensure_visible=True)
+    create_response, create_todo = todo_factory(json=create_body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
 
     with allure.step(f'Выполнить QUERY: фильтр doneStatus={done_status}'):
         response = api_client.query(
@@ -42,7 +41,7 @@ def test_046_query_done_status(api_client, _case_info, done_status, todo_factory
     todos = query_payload['todos']
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
-    assert create_payload['id'] in {t['id'] for t in todos}, (
+    assert create_todo.id in {t['id'] for t in todos}, (
         f'QUERY did not include the created doneStatus={done_status} todo'
     )
     for todo in todos:
@@ -66,11 +65,10 @@ def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, tod
         'doneStatus': done_status == 'true',
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body, ensure_visible=True)
+    create_response, create_todo = todo_factory(json=create_body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
 
     with allure.step(f'Выполнить QUERY JSONPath: фильтр doneStatus={done_status}'):
         response = api_client.query(
@@ -82,7 +80,7 @@ def test_047_query_done_status_jsonpath(api_client, _case_info, done_status, tod
     todos = query_payload['todos']
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
-    assert create_payload['id'] in {t['id'] for t in todos}, (
+    assert create_todo.id in {t['id'] for t in todos}, (
         f'QUERY JSONPath did not include the created doneStatus={done_status} todo'
     )
     for todo in todos:
@@ -107,11 +105,10 @@ def test_048_query_done_status_json(api_client, _case_info, done_status, todo_fa
         'doneStatus': done_status,
         'description': 'test description',
     }
-    create_response, create_payload = todo_factory(json=create_body, ensure_visible=True)
+    create_response, create_todo = todo_factory(json=create_body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=create_response, expected_content_type='application/json')
-        assert_todo_item(create_payload)
-        assert_todo_item_matches(item=create_payload, expected=create_body)
+        assert_todo_item_matches(item=create_todo.model_dump(), expected=create_body)
     with allure.step(f'Выполнить QUERY Structured JSON: фильтр doneStatus={done_status}'):
         response = api_client.query(
             TODOS_PATH,
@@ -122,7 +119,7 @@ def test_048_query_done_status_json(api_client, _case_info, done_status, todo_fa
     todos = query_payload['todos']
     assert_status_code(response=response, expected_status_code=200)
     assert_content_type(response=response, expected_content_type='application/json')
-    assert create_payload['id'] in {t['id'] for t in todos}, (
+    assert create_todo.id in {t['id'] for t in todos}, (
         f'QUERY Structured JSON did not include the created doneStatus={done_status} todo'
     )
     for todo in todos:

@@ -40,18 +40,17 @@ def test_017_done_status_false(api_client):
 def test_018_done_status_true(api_client, todo_factory):
     """Фильтр ?doneStatus=true включает созданный завершённый todo."""
     body = {'title': 'Test title', 'doneStatus': True, 'description': 'test description'}
-    post_response, post_payload = todo_factory(json=body, ensure_visible=True)
+    post_response, post_todo = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=post_response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=body)
 
     with allure.step('Запросить todos: фильтр doneStatus=true'):
         get_response = api_client.get(f'{TODOS_PATH}?doneStatus=true')
     assert_status_code(response=get_response, expected_status_code=200)
     get_payload = get_response.json()
     todos = get_payload['todos']
-    assert post_payload['id'] in {t['id'] for t in todos}, (
+    assert post_todo.id in {t['id'] for t in todos}, (
         'Filter did not include the created doneStatus=true todo'
     )
     assert_content_type(response=get_response, expected_content_type='application/json')
@@ -133,11 +132,10 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
     """Фильтр ?description~=regexp отбирает по регулярному выражению."""
     test_regexp = re.compile(regexp)
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
-    post_response, post_payload = todo_factory(json=body, ensure_visible=True)
+    post_response, post_todo = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=post_response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=body)
 
     with allure.step('Запросить todos: фильтр description regexp'):
         get_response = api_client.get(f'{TODOS_PATH}?description~={regexp}')
@@ -145,7 +143,7 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
     get_payload = get_response.json()
     todos = get_payload['todos']
     assert_content_type(response=get_response, expected_content_type='application/json')
-    assert post_payload['id'] in {t['id'] for t in todos}, (
+    assert post_todo.id in {t['id'] for t in todos}, (
         f'Filter did not include the created description = {description} todo'
     )
     for todo in todos:
@@ -168,11 +166,10 @@ def test_022_description_regexp(api_client, _case_info, description, regexp, tod
 def test_023_description_wildcard(api_client, _case_info, description, wildcard, todo_factory):
     """Фильтр ?description*=wildcard отбирает по glob-шаблону."""
     body = {'title': 'Test title', 'doneStatus': True, 'description': description}
-    post_response, post_payload = todo_factory(json=body, ensure_visible=True)
+    post_response, post_todo = todo_factory(json=body, ensure_visible=True)
     with allure.step('Проверить создание todo'):
         assert_content_type(response=post_response, expected_content_type='application/json')
-        assert_todo_item(post_payload)
-        assert_todo_item_matches(item=post_payload, expected=body)
+        assert_todo_item_matches(item=post_todo.model_dump(), expected=body)
 
     with allure.step('Запросить todos: фильтр description wildcard'):
         get_response = api_client.get(f'{TODOS_PATH}?description*={wildcard}')
@@ -180,7 +177,7 @@ def test_023_description_wildcard(api_client, _case_info, description, wildcard,
     get_payload = get_response.json()
     todos = get_payload['todos']
     assert_content_type(response=get_response, expected_content_type='application/json')
-    assert post_payload['id'] in {t['id'] for t in todos}, (
+    assert post_todo.id in {t['id'] for t in todos}, (
         f'Filter did not include the created description = {description} todo'
     )
     for todo in todos:
@@ -196,8 +193,8 @@ def test_023_description_wildcard(api_client, _case_info, description, wildcard,
 def test_024_sort_by_title_asc(api_client, todo_factory):
     """Сортировка ?_sortBy=title по возрастанию включает созданный todo."""
     body = {'title': 'Aaa sort', 'doneStatus': False, 'description': 'sort test'}
-    _, post_payload = todo_factory(json=body, ensure_visible=True)
-    new_id = post_payload['id']
+    _, post_todo = todo_factory(json=body, ensure_visible=True)
+    new_id = post_todo.id
     with allure.step('Запросить todos: сортировка по title'):
         response = api_client.get(f'{TODOS_PATH}?_sortBy=title')
     payload = response.json()

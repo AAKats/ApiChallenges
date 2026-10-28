@@ -22,6 +22,7 @@ from api_challenges.clients import (
     BaseClient,
 )
 from api_challenges.config import Settings, get_settings
+from api_challenges.models import TodoItem
 from api_challenges.utils import todo_from_xml
 
 KNOWN_UNCREDITED = {
@@ -107,7 +108,8 @@ def todo_factory(api_client) -> Iterator[Callable[..., tuple[httpx.Response, dic
         """Создание todo и запоминание его id для последующей очистки."""
         response, create_payload = _create_todo(api_client, **kwargs)
         created_ids.append(create_payload['id'])
-        return response, create_payload
+        todo = TodoItem.model_validate(create_payload)
+        return response, todo
 
     yield _create
 
